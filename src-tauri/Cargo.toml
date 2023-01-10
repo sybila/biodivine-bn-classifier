@@ -15,8 +15,10 @@ rust-version = "1.59"
 tauri-build = { version = "1.2.1", features = [] }
 
 [dependencies]
-biodivine-lib-param-bn = "0.4.2"
-biodivine-lib-bdd = "0.4.2"
+# Older versions are used because aeon server needs them. Once that dependency is gone, we can update.
+biodivine-lib-param-bn = "0.3.0"
+biodivine-lib-bdd = "0.4.0"
+biodivine-aeon-server = { git = "https://github.com/sybila/biodivine-aeon-server" }
 json = "0.12.4"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }

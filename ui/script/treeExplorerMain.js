@@ -26,7 +26,7 @@ function Math_percent(cardinality, total) {
 	return Math.round((cardinality / total) * 100);
 }
 
-function init() {
+function init() {	
 	// Set engine address according to query parameter
 	const urlParams = new URLSearchParams(window.location.search);
 	const engineAddress = urlParams.get('engine');	
