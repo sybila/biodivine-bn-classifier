@@ -1,0 +1,1003 @@
+/*
+	Custom font used for names and other `technical` texts.
+*/
+@font-face {
+    font-family: 'FiraMono';
+    src: url('font/FiraMono-Regular.ttf');
+}
+
+@font-face {
+    font-family: 'FiraMonoBold';
+    src: url('font/FiraMono-Bold.ttf');
+}
+
+
+@font-face {
+    font-family: 'symbols';
+    src: url('font/Symbols.ttf');
+}
+
+@font-face {
+    font-family: 'BaileyReg';
+    src: url("font/B3.ttf");
+}
+
+@font-face {
+    font-family: 'BaileyBold';
+    src: url("font/B2.ttf");
+}
+
+body {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+}
+
+#loading-indicator {
+    text-align: center;
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0px 2px 5px #d0d0d0;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 24px;
+    pointer-events: none;
+    transition: 0.3s; 
+}
+
+#logo {
+    width: fit-content;
+    width: -moz-fit-content;
+    position: fixed;
+    margin: 0;
+    top: 24px;
+    right: 24px;
+    font-family: 'BaileyReg', monospace;
+    font-weight: normal;
+    color: #3a568c;
+    font-size: 2.2em;
+}
+
+#title{
+    font-family: 'BaileyBold', monospace;
+    font-weight: bold;
+    color: #d05d5d;
+}
+
+#version {
+    display: inline-block;
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+}
+
+
+/*
+	The root of the model editor and attractor visualization 
+    - just stretch across the whole page...
+*/
+#cytoscape-editor, #visjs-container {
+	position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;    
+    top: 0;
+    background: #f9f9f9;
+    z-index: -1;
+}
+
+/*
+    The menu that is displayed when user clicks on a node.
+*/
+.float-menu {
+	position: absolute;
+    /* Initially, menu is off screen */
+	left: -200px;
+	top: -200px;
+    /* This is to accommodate longer hints */
+    width: 190px;
+    /* Ensure hint is in the middle */
+    text-align: center;
+	/* Ensures the zoom is properly applied when needed */
+	transform-origin: 0% 0%;
+    /* We don't animate other stuff because that needs to be in sync with the graph */
+    transition: opacity 0.3s;
+}
+
+.float-menu .button {
+    width: 24px;
+    height: 24px;
+    padding: 12px;
+    border-radius: 24px;    
+    transition: 0.3s;
+}
+
+.float-menu .button:hover {
+    background-color: #CFD8DC;
+}
+
+.float-menu .button-row {
+    height: 48px;
+    width: 153px;
+    margin: 0 auto;
+    border-radius: 24px;
+    background-color: #ECEFF1;
+}
+
+.float-menu .hint {
+    font-weight: bold;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    text-shadow: 0px 2px 5px #d0d0d0;
+}
+
+/*
+    The menu with main buttons/panels
+*/
+#side-menu {
+    position: absolute;
+    top: 0;
+}
+
+#side-menu .button, #side-menu .button-fake {
+    width: 48px;
+    height: 48px;
+    padding: 12px;
+    border-radius: 24px;
+    background-color: #ECEFF1;
+    display: inline-block;
+    transition: background-color 0.3s;
+}
+
+#side-menu .button.selected, #side-menu .button-fake.selected {
+    background-color: #CFD8DC;
+}
+
+#side-menu .button:hover, #side-menu .button-fake:hover {
+    background-color: #B0BEC5;
+}
+
+#side-menu .button-group, #side-menu .button-group-fake {
+    background-color: #ECEFF1;
+    display: block;
+    border-radius: 24px;
+    box-shadow: 0px 2px 5px #d0d0d0;
+    height: 72px;
+    width: 72px;
+    transition: width 0.3s;
+    position: relative;
+    margin-bottom: 12px;
+}
+
+#side-menu .button-group .hint, #side-menu .button-group-fake .hint {
+    width: 200px;
+    line-height: 72px;
+    display: table-cell;
+    position: absolute;
+    top: 0px;
+    left: 72px;
+    font-weight: bold;    
+    font-size: 20px;    
+    text-align: center;      
+    pointer-events: none;
+}
+
+#quick-help {
+    position: fixed; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%);
+    padding: 24px;
+    border-radius: 12px;
+    color: #ffffff;
+    background: #646464;
+    font-size: 18px;
+    font-family: 'FiraMono';
+    opacity: 0.5;
+    transition: 0.3s;
+    pointer-events: none;
+}
+
+.main-panel {
+    display: block;
+    background-color: #f5f5f5;
+    box-shadow: 0px 2px 5px #d0d0d0;
+    width: 500px;
+    margin-left: 82px;
+    padding: 12px;
+    border-radius: 8px;
+    position: relative;
+    overflow-y: auto;
+    max-height: 95vh;
+}
+
+#tree-explorer .main-panel {
+    margin: 0 auto; 
+    float: left;
+}
+
+.panel-close-button {
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    border-radius: 8px;    
+    transition: 0.3s;
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    transition: background-color 0.3s;
+}
+
+.panel-close-button:hover {
+    background: #CFD8DC;
+}
+
+.invisible-input {
+    position: relative;
+    display: inline-block;
+}
+
+.invisible-input input {
+    font-family: 'FiraMono', monospace;
+    background: none;
+    border: none;
+    font-size: 14px;   
+}
+
+.invisible-input textarea {
+    font-family: 'FiraMono', monospace;
+    background: none;
+    border: none;
+    font-size: 14px;
+    resize: none;
+    height: 1.25em;
+}
+
+.invisible-input .error, .invisible-input.error {
+    background-color: rgba(200, 40, 40, 0.4); 
+}
+
+div.invisible-input[contenteditable] {    
+    max-height: 200px;    
+    padding-top: 4px;
+    padding-bottom: 4px;
+    overflow: auto;
+    word-break: break-all;    
+    font-family: 'FiraMono';
+    transition: 0.3s;
+}
+
+div.invisible-input[contenteditable]:focus {    
+    outline: none;
+    background-color: #ECEFF1;
+    border-radius: 4px;
+}
+
+/* Magic that enables placeholder inside content editable. */
+/* Sadly, you still have to apply `ensurePlaceholder` to it. */
+div.invisible-input[contenteditable]:empty:not(:focus):before {
+  content:attr(data-placeholder);
+  color:grey;
+  font-style:italic;
+}
+
+.invisible-input input:focus {
+    outline: none;
+    font-weight: bold;
+    font-family: 'FiraMonoBold', monospace;
+}
+
+.invisible-input textarea:focus {
+    outline: none;
+    font-weight: bold;
+    font-family: 'FiraMonoBold', monospace;
+}
+
+.invisible-input::after {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    content: url('img/edit-24px.svg');
+    transition: opacity 0.3s;
+    opacity: 0;
+}
+
+.invisible-input:hover::after {
+    opacity: 1;
+}
+
+.invisible-input[disabled]:hover::after {
+    opacity: 0;
+}
+
+.invisible-input.full-line {
+    width: 100%;
+}
+
+.invisible-input.full-line input {
+    width: 100%;
+}
+
+.invisible-input.full-line textarea {
+    width: 100%;
+}
+
+#engine-dot {
+    position: absolute;
+    left: 55px;
+    top: -20px;
+    font-size: 45px;
+}
+
+.compound-button {
+    background-color: #CFD8DC;
+    display: inline-block;
+    border-radius: 12px;
+    box-shadow: 0px 2px 5px #d0d0d0;
+    height: 60px;
+    position: relative;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 0px;
+    transition: background-color 0.3s;
+    border: none;
+    text-align: center;
+}
+
+.compound-button span {
+    display: inline-block;
+    width: 122px;
+    height: 60px;
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.compound-button .desc {
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;            
+    transition: 0.3s;
+}
+
+.compound-button .main {
+    background: #ECEFF1;    
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;    
+    transition: 0.3s;
+}
+
+.compound-button:hover {
+    background-color: #B0BEC5;
+}
+
+.compound-button:hover .main {
+    background-color: #CFD8DC;
+}
+
+.compound-button:focus {
+    outline: none;
+}
+
+.compound-button:active {
+    border: none;
+}
+
+.image-button {
+    background-color: #ECEFF1;
+    display: inline-block;
+    border-radius: 12px;
+    box-shadow: 0px 2px 5px #d0d0d0;
+    height: 40px;
+    position: relative;
+    font-size: 16px;
+    font-weight: bold;
+    padding-right: 40px;
+    padding-left: 12px;
+    transition: background-color 0.3s;
+    border: none;
+    cursor: pointer;
+}
+
+.image-button:hover {
+    background-color: #B0BEC5;
+}
+
+.image-button:focus {
+    outline: none;
+}
+
+.image-button:active {
+    border: none;
+}
+
+.image-button img {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    width: 24px;
+    height: 24px;    
+}
+
+.model-variable {
+    display: block;
+    padding: 8px;
+    background-color: #fafafa;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    box-shadow: 0px 2px 5px #d0d0d0;
+    border: 2.0px #fafafa solid;
+    position: relative;
+    transition: 0.5s;
+}
+
+.model-variable h4 {
+    width: 100%; 
+    margin-top: 8px; 
+    margin-bottom: 4px; 
+    text-transform: uppercase; 
+    font-size: 12px;
+    font-family: 'FiraMono', monospace;
+}
+
+.model-variable.hover {
+    border: 2.0px #6a7ea5 dashed;
+}
+
+.model-variable.selected {
+    border: 2.0px #6a7ea5 solid;
+}
+
+.model-variable .button {
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    border-radius: 8px;    
+    transition: 0.3s;    
+    opacity: 0.5;
+}
+
+.model-variable .button:hover {
+    background-color: #CFD8DC;
+    opacity: 1;
+}
+
+.model-variable-remove {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+}
+
+.model-variable-show {
+    position: absolute;
+    right: 36px;
+    top: 4px;
+}
+
+#model-stats {
+    font-family: 'FiraMono', monospace;
+    margin-bottom: 8px;
+}
+
+#model-stats .value {
+    width: 50px;
+    text-align: center;
+}
+
+#computation {
+    font-family: 'FiraMono';
+    margin-bottom: 32px;
+}
+
+.model-regulation {
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    font-family: 'FiraMono', 'monospace';    
+}
+
+.model-regulation .model-regulation-observable, .model-regulation .model-regulation-monotonicity {
+    cursor: pointer;
+    user-select: none;
+}
+
+.model-regulation.hover {
+    background-color: #ECEFF1;
+    border-radius: 4px;
+}
+
+.model-regulation .model-regulation-observable:hover, .model-regulation .model-regulation-monotonicity:hover {
+    font-weight: bold;
+    font-family: 'FiraMonoBold';
+}
+
+.model-regulation span {
+    display: inline-block;
+}
+
+.model-regulation .model-regulation-regulator {
+    width: 112px;
+    text-align: right;
+    overflow-wrap: break-word;
+}
+
+.model-regulation .model-regulation-short {
+    width: 32px;
+    text-align: center;
+}
+
+.model-regulation .model-regulation-observable {
+    width: 150px;
+    text-align: center;
+}
+
+.model-regulation .model-regulation-monotonicity {
+    width: 110px;
+    text-align: center;
+}
+
+.variable-function-status {
+    font-family: 'FiraMono', monospace;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.inline-button {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+#tab-results .table-head {
+    font-family: 'FiraMonoBold', monospace;
+    font-weight: bold;
+}
+
+#tab-results .table-behavior {
+    font-family: 'symbols';
+    letter-spacing: 5px;
+    font-style: normal;
+}
+
+#tab-results table {
+    margin: 0 auto;
+    text-align: center;
+    font-size: 18px;
+}
+
+#tab-results td {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+#model-variables:empty {
+    text-align: center;    
+    margin-bottom: 24px;
+}
+
+#model-variables:empty:after {
+    content: "No variables";
+    color: #656565;    
+}
+
+#results:empty:after {
+    content: "Waiting for results...";
+}
+
+#results:empty {
+    text-align: center;
+}
+
+#tab-results {
+    font-family: 'FiraMono', monospace;
+}
+
+#result-legend {
+    margin-top: 16px;
+    font-size: 12px;
+    text-align: center;
+}
+
+input.center {
+    text-align: center;
+}
+
+textarea.center {
+    text-align: center;
+}
+
+button.center {
+    margin: 0 auto;
+}
+
+div.center {
+    margin: 0 auto;
+    text-align: center;
+}
+
+/* exploration panel */
+#explorer-valuations {
+    position: absolute;
+    text-align: center;
+    font-size: 1.5em;
+    font-family: 'Fira Mono';
+    background: #eceff1;
+    border-radius: 3px;
+    height: auto;
+    padding-top: 28px;
+    padding-bottom: 28px;
+    bottom: 0;
+    width: 60%;
+    left: 20%;
+    box-shadow: -4px 7px 20px 7px #d0d0d0;
+}
+
+#explorer-valuations-text {
+    position: relative;    
+}
+
+#explorer-update-functions li {
+    padding: 8px 0;
+}
+
+.explorer-fnName {
+    padding-right: 10px;
+}
+
+.explorer-fnName::after {
+    content: ':';
+}
+
+.valuation-pair {
+    margin: 0 8px;
+    display: inline-block;
+}
+
+/* Behaviour table styles used by the tree explorer. */
+.behavior-table {
+    width: 468px;
+    margin: 0 auto;
+    margin-top: 16px;
+    margin-bottom: 16px;
+    text-align: center;
+    table-layout: fixed;
+    word-break: break-all;
+    /* remove cell spacing for proper borders */
+    border-collapse: collapse;
+}
+.behavior-table-header td {
+    border-bottom: 1px solid black;    
+    margin-bottom: 4px;
+}
+.behavior-table td {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+.behavior-table .cell-behavior {
+    width: 200px;
+}
+
+.behavior-table .cell-witness-count,
+.behavior-table .cell-distribution {
+    width: 125px;
+}
+
+#transparency-switch {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    font-weight: bold;    
+}
+
+/* 
+    As a general note to future generations: 
+    In some browsers, you won't see a scroll-bar when the computer only has a touchpad.
+    That means there will be a scroll-bar once you connect a mouse, which will mess
+    up your margins and/or paddings. 
+
+    Lesson learned: Do not use fixed left/right margins for centering in a fixed-width
+    container. Instead use margin:0 auto; and let the scrollbar eat into the auto margin.
+*/
+
+.attribute-panel {
+    display: block;
+    padding: 8px;
+    background-color: #fafafa;
+    margin: 0 auto;
+    margin-top: 12px;
+    margin-bottom: 24px;
+    border-radius: 8px;
+    box-shadow: 0px 2px 5px #d0d0d0;
+    border: 2.0px #fafafa solid;
+    position: relative;
+    transition: 0.5s;
+}
+
+.attribute-panel .attribute-name {
+    cursor: pointer;
+    width: 300px;
+    text-align: right;
+    word-break: break-all;
+}
+
+.attribute-sub-panel {
+    width: 220px;    
+    display: inline-block;
+    vertical-align: top;    
+}
+
+.attribute-sub-panel .title {
+    display: inline-block;
+    width: 220px;
+    text-align: center;
+    margin-top: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #ccc;    
+}
+
+.attribute-sub-panel table {
+    width: 220px;
+    table-layout: fixed;
+    word-wrap: break-word;
+}
+
+.attribute-sub-panel td {
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+}
+
+.attribute-sub-panel td.distribution {
+    width: 39px;
+}
+
+.attribute-sub-panel table.collapsed tr.extra {
+    display: none;
+}
+
+/* Fix for weird vertical alignment of the symbol font. */
+.attribute-sub-panel .phenotype {
+    position: relative;
+    bottom: -5px;
+}
+
+.attribute-sub-panel.negative .phenotype {
+    text-align: right;    
+}
+.attribute-sub-panel.positive .distribution {
+    text-align: right;
+}
+
+.attribute-panel:hover .expand-button {
+    display: block;
+}
+
+.expand-button {
+    display: none;
+    position: absolute;
+    left: 200px;
+    bottom: -13px;
+    text-align: center;
+    background-color: #EFEFEF;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-radius: 6px;
+    box-shadow: 0px 2px 5px #d0d0d0;
+    transition: background-color 0.3s;    
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.expand-button:hover {
+    background-color: #ccc;
+}
+
+.stability-panel {
+    clear: both;
+    word-break: break-all;
+}
+
+
+.invisible {
+    opacity: 0;
+}
+
+.gone {
+    display: none;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.primary {
+    color: #3a568c;
+}
+
+.red {
+    color: #d05d5d;
+}
+
+.green {
+    color: #4abd73;
+}
+
+.orange {
+    color: #EF6C00;
+}
+
+.grey {
+    color: #797979;
+}
+
+.symbols {
+    font-family: symbols;
+}
+
+.fira-mono {
+    font-family: FiraMono, monospace;
+}
+
+.sort-checkbox input {
+    position: relative;
+    top: 1px;
+    margin-right: 8px;
+}
+
+.sort-checkbox {
+    white-space: nowrap;
+}
+
+.stability-dropdown {
+    font-size: 16px;
+    font-weight: bold;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-radius: 12px;
+    background-color: #ECEFF1;  
+    border-color: #ECEFF1;
+    height: 40px;
+    margin-left: 12px;
+    margin-right: 12px;
+    box-shadow: 0px 2px 5px #d0d0d0;    
+}
+
+.stability-dropdown:focus {
+    outline: none;
+}
+
+.witness-panel {
+    font-size: 12px;
+    float: right;
+}
+
+
+#precision {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    text-align: center;
+    width: 200px;
+}
+
+/* The slider itself */
+.seekbar {
+  -webkit-appearance: none;  /* Override default CSS styles */
+  appearance: none;
+  width: 100%; /* Full-width */
+  height: 25px; /* Specified height */
+  background: #d3d3d3; /* Grey background */
+  outline: none; /* Remove outline */
+  opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+  -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+  transition: opacity .2s;
+  border-radius: 4px;
+}
+
+/* Mouse-over effects */
+.seekbar:hover {
+  opacity: 1; /* Fully shown on mouse-over */
+}
+
+/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
+.seekbar::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Override default look */
+  appearance: none;
+  width: 25px; /* Set a specific slider handle width */
+  height: 25px; /* Slider handle height */
+  background: #3a568c; /* Green background */
+  cursor: pointer; /* Cursor on hover */
+  border-radius: 4px;
+}
+
+.seekbar::-moz-range-thumb {
+  width: 25px; /* Set a specific slider handle width */
+  height: 25px; /* Slider handle height */
+  background: #3a568c; /* Green background */
+  cursor: pointer; /* Cursor on hover */
+  border-radius: 4px;
+}
+
+/*========== Toggle button styles ===========*/
+
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #797979;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #3a568c;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #3a568c;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(17px);
+  -ms-transform: translateX(17px);
+  transform: translateX(17px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/*========= END Toggle button styles ========== */
+
+/*
+Color scheme:
+
+    Backgrounds: #ECEFF1;
+    Basic element background: #CFD8DC;
+    Highlighted element background: #B0BEC5;
+
+*/
