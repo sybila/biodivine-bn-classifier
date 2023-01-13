@@ -18,6 +18,26 @@ use crate::bdt::{AttributeId, Bdt, BdtNodeId, Outcome};
 pub mod bdt;
 pub mod util;
 
+const TEST_MODEL: &'static str = r#"
+CtrA -> CtrA
+GcrA -> CtrA
+CcrM -| CtrA
+SciP -| CtrA
+CtrA -| GcrA
+DnaA -> GcrA
+CtrA -> CcrM
+CcrM -| CcrM
+SciP -| CcrM
+CtrA -> SciP
+DnaA -| SciP
+$SciP:CtrA & !DnaA
+CtrA -> DnaA
+GcrA -| DnaA
+DnaA -| DnaA
+CcrM -> DnaA
+$DnaA:CtrA & CcrM & !(GcrA | DnaA)
+"#;
+
 fn attractors(stg: &SymbolicAsyncGraph, set: &GraphColoredVertices) -> Vec<GraphColoredVertices> {
     let mut results: Vec<GraphColoredVertices> = Vec::new();
     let root_stg = stg;
@@ -131,7 +151,7 @@ async fn revert_decision(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<
 }
 
 fn main() {
-    let model = BooleanNetwork::try_from(std::fs::read_to_string("model.aeon").unwrap().as_str()).unwrap();
+    let model = BooleanNetwork::try_from(TEST_MODEL).unwrap();
     let stg = SymbolicAsyncGraph::new(model).unwrap();
     println!("Start attractors.");
     let attractors = attractors(&stg, stg.unit_colored_vertices());

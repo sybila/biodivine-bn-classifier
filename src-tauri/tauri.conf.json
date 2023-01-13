@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "hctl-explorer",
-    "version": "0.1.0"
+    "version": "0.1.0-SNAPSHOT1"
   },
   "tauri": {
     "allowlist": {
@@ -33,7 +33,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "cz.fi.muni.sybila.hctl-explorer",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -60,10 +60,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 768,
         "resizable": true,
         "title": "HCTL Explorer",
-        "width": 800
+        "width": 1024
       }
     ]
   }
