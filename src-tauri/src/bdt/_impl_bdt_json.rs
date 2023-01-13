@@ -15,7 +15,7 @@ impl BdtNode {
             BdtNode::Leaf { class, params } => object! {
                 "type" => "leaf".to_string(),
                 "cardinality" => params.approx_cardinality(),
-                "class" => format!("{}", class),
+                "class" => format!("{class}"),
             },
             BdtNode::Unprocessed { classes } => {
                 if let Some((major_class, major_params)) = get_majority_class(classes, precision) {
@@ -143,7 +143,7 @@ pub(super) fn class_list_to_json(classes: &OutcomeMap) -> JsonValue {
 pub(super) fn class_to_json((class, params): (&Outcome, &GraphColors)) -> JsonValue {
     object! {
         "cardinality" => params.approx_cardinality(),
-        "class" => format!("{}", class),
+        "class" => format!("{class}"),
     }
 }
 

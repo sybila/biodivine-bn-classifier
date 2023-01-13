@@ -29,7 +29,7 @@ impl Bdt {
     ) -> Result<(), std::io::Error> {
         match &self[node] {
             BdtNode::Leaf { class, params } => {
-                let class = format!("{}", class).replace("\"", "");
+                let class = format!("{class}").replace('\"', "");
                 writeln!(
                     out,
                     "{}[label=\"{}({})\"];",
@@ -41,10 +41,10 @@ impl Bdt {
             BdtNode::Unprocessed { classes } => {
                 let classes: Vec<String> = classes
                     .iter()
-                    .map(|(c, p)| format!("({},{})", c, p.approx_cardinality()).replace("\"", ""))
+                    .map(|(c, p)| format!("({c},{})", p.approx_cardinality()).replace('\"', ""))
                     .collect();
-                let classes = format!("{:?}", classes).replace("\"", "");
-                writeln!(out, "{}[label=\"Unprocessed({})\"]", node, classes)?;
+                let classes = format!("{classes:?}").replace('\"', "");
+                writeln!(out, "{node}[label=\"Unprocessed({classes})\"]")?;
             }
             BdtNode::Decision {
                 attribute,
@@ -52,9 +52,9 @@ impl Bdt {
                 right,
                 ..
             } => {
-                writeln!(out, "{}[label=\"{}\"]", node, self[*attribute].name)?;
-                writeln!(out, "{} -> {} [style=dotted];", node, left)?;
-                writeln!(out, "{} -> {} [style=filled];", node, right)?;
+                writeln!(out, "{node}[label=\"{}\"]", self[*attribute].name)?;
+                writeln!(out, "{node} -> {left} [style=dotted];")?;
+                writeln!(out, "{node} -> {right} [style=filled];")?;
                 self.format_dot_recursive(out, *left)?;
                 self.format_dot_recursive(out, *right)?;
             }

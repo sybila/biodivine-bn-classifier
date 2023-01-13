@@ -1,24 +1,24 @@
 #![cfg_attr(
-  all(not(debug_assertions), target_os = "windows"),
-  windows_subsystem = "windows"
+    all(not(debug_assertions), target_os = "windows"),
+    windows_subsystem = "windows"
 )]
 #[macro_use]
 extern crate json;
 
-use std::collections::HashMap;
-use std::sync::Mutex;
+use crate::bdt::{AttributeId, Bdt, BdtNodeId, Outcome};
 use biodivine_aeon_server::scc::Classifier;
 use biodivine_lib_param_bn::biodivine_std::traits::Set;
-use biodivine_lib_param_bn::BooleanNetwork;
 use biodivine_lib_param_bn::symbolic_async_graph::{GraphColoredVertices, SymbolicAsyncGraph};
+use biodivine_lib_param_bn::BooleanNetwork;
 use json::JsonValue;
+use std::collections::HashMap;
+use std::sync::Mutex;
 use tauri::State;
-use crate::bdt::{AttributeId, Bdt, BdtNodeId, Outcome};
 
 pub mod bdt;
 pub mod util;
 
-const TEST_MODEL: &'static str = r#"
+const TEST_MODEL: &str = r#"
 CtrA -> CtrA
 GcrA -> CtrA
 CcrM -| CtrA
@@ -62,7 +62,7 @@ fn attractors(stg: &SymbolicAsyncGraph, set: &GraphColoredVertices) -> Vec<Graph
         // Further restrict the STG by removing the current basin.
         active_stg = active_stg.restrict(&active_stg.unit_colored_vertices().minus(&pivot_basin));
     }
-    return results;
+    results
 }
 
 #[tauri::command]
@@ -84,7 +84,11 @@ async fn get_decision_tree(tree: State<'_, Mutex<Bdt>>) -> Result<String, String
 }
 
 #[tauri::command]
-async fn auto_expand_tree(tree: State<'_, Mutex<Bdt>>, node_id: usize, depth: u32) -> Result<String, String> {
+async fn auto_expand_tree(
+    tree: State<'_, Mutex<Bdt>>,
+    node_id: usize,
+    depth: u32,
+) -> Result<String, String> {
     if depth > 10 {
         return Err("Maximum allowed depth is 10.".to_string());
     }
@@ -92,40 +96,47 @@ async fn auto_expand_tree(tree: State<'_, Mutex<Bdt>>, node_id: usize, depth: u3
     let node_id: BdtNodeId = if let Some(node_id) = BdtNodeId::try_from(node_id, &tree) {
         node_id
     } else {
-        return Err(format!("Invalid node id {}.", node_id));
+        return Err(format!("Invalid node id {node_id}."));
     };
     let changed = tree.auto_expand(node_id, depth);
     Ok(tree.to_json_partial(&changed).to_string())
 }
 
 #[tauri::command]
-async fn get_decision_attributes(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<String, String> {
+async fn get_decision_attributes(
+    tree: State<'_, Mutex<Bdt>>,
+    node_id: usize,
+) -> Result<String, String> {
     let tree = tree.lock().unwrap();
     let node = BdtNodeId::try_from(node_id, &tree);
     let node = if let Some(node) = node {
         node
     } else {
-        return Err(format!("Invalid node id {}.", node_id));
+        return Err(format!("Invalid node id {node_id}."));
     };
 
     Ok(tree.attribute_gains_json(node).to_string())
 }
 
 #[tauri::command]
-async fn apply_decision_attribute(tree: State<'_, Mutex<Bdt>>, node_id: usize, attribute_id: usize) -> Result<String, String> {
+async fn apply_decision_attribute(
+    tree: State<'_, Mutex<Bdt>>,
+    node_id: usize,
+    attribute_id: usize,
+) -> Result<String, String> {
     let mut tree = tree.lock().unwrap();
     let Some(node) = BdtNodeId::try_from(node_id, &tree) else {
-        return Err(format!("Invalid node id {}.", node_id));
+        return Err(format!("Invalid node id {node_id}."));
     };
     let Some(attribute) = AttributeId::try_from(attribute_id, &tree) else {
-        return Err(format!("Invalid attribute id {}.", attribute_id));
+        return Err(format!("Invalid attribute id {attribute_id}."));
     };
     if let Ok((left, right)) = tree.make_decision(node, attribute) {
         let changes = array![
-                tree.node_to_json(node),
-                tree.node_to_json(left),
-                tree.node_to_json(right),
-            ];
+            tree.node_to_json(node),
+            tree.node_to_json(left),
+            tree.node_to_json(right),
+        ];
         Ok(changes.to_string())
     } else {
         Err("Invalid node or attribute id.".to_string())
@@ -136,7 +147,7 @@ async fn apply_decision_attribute(tree: State<'_, Mutex<Bdt>>, node_id: usize, a
 async fn revert_decision(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<String, String> {
     let mut tree = tree.lock().unwrap();
     let Some(node) = BdtNodeId::try_from(node_id, &tree) else {
-        return Err(format!("Invalid node id {}.", node_id));
+        return Err(format!("Invalid node id {node_id}."));
     };
     let removed = tree.revert_decision(node);
     let removed = removed
@@ -144,9 +155,9 @@ async fn revert_decision(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<
         .map(|v| v.to_index())
         .collect::<Vec<_>>();
     let response = object! {
-                "node": tree.node_to_json(node),
-                "removed": JsonValue::from(removed)
-        };
+            "node": tree.node_to_json(node),
+            "removed": JsonValue::from(removed)
+    };
     Ok(response.to_string())
 }
 
@@ -161,7 +172,7 @@ fn main() {
     }
     let mut outcomes = HashMap::new();
     for (class, set) in classification.export_result() {
-        outcomes.insert(Outcome::from(format!("{}", class)), set);
+        outcomes.insert(Outcome::from(format!("{class}")), set);
     }
     let bdt = Bdt::new_from_graph(outcomes, &stg);
     println!("Found attractors: {}", attractors.len());

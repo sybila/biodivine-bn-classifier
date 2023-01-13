@@ -6,10 +6,7 @@ use std::collections::HashMap;
 
 impl Attribute {
     /// Apply this attribute to the given bifurcation function, splitting it into two.
-    pub fn split_function(
-        &self,
-        classes: &OutcomeMap,
-    ) -> (OutcomeMap, OutcomeMap) {
+    pub fn split_function(&self, classes: &OutcomeMap) -> (OutcomeMap, OutcomeMap) {
         (
             Self::restrict(classes, &self.negative),
             Self::restrict(classes, &self.positive),
