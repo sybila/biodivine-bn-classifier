@@ -68,13 +68,6 @@ let CytoscapeEditor = {
 			document.getElementById("button-add-variable").classList.remove("gone");
 			document.getElementById("mixed-attributes").classList.add("gone");
 			document.getElementById("mixed-attributes-list").innerHTML = "";
-			// Reset stability analysis buttons:
-			document.getElementById("mixed-stability-analysis-button").classList.remove("gone");
-			document.getElementById("leaf-stability-analysis-button").classList.remove("gone");
-			document.getElementById("decision-stability-analysis-button").classList.remove("gone");
-			document.getElementById("mixed-stability-analysis").innerHTML = "";
-			document.getElementById("leaf-stability-analysis").innerHTML = "";
-			document.getElementById("decision-stability-analysis").innerHTML = "";
 		})
 	},
 
@@ -150,19 +143,14 @@ let CytoscapeEditor = {
 		document.getElementById("decision-info").classList.remove("gone");
 		document.getElementById("decision-attribute").innerHTML = data.treeData.attribute_name;
 		document.getElementById("decision-phenotype-label").innerHTML = 
-			"Phenotypes (" + data.treeData.classes.length + "):";
+			"Outcomes (" + data.treeData.classes.length + "):";
 		let behaviorTable = document.getElementById("decision-behavior-table");		
-		this._renderBehaviorTable(data.treeData.classes, data.treeData.cardinality, behaviorTable);
-
-		let stabilityButton = document.getElementById("decision-stability-analysis-button");
-		let stabilityDropdown = document.getElementById("decision-stability-dropdown");
-		let stabilityContainer = document.getElementById("decision-stability-analysis");
-		initStabilityButton(data.treeData.id, stabilityButton, stabilityDropdown, stabilityContainer);		
+		this._renderBehaviorTable(data.treeData.classes, data.treeData.cardinality, behaviorTable);	
 	},
 
 	_showMixedPanel(data) {
 		document.getElementById("mixed-info").classList.remove("gone");
-		document.getElementById("mixed-type-label").innerHTML = data.treeData.classes.length + " Phenotypes";
+		document.getElementById("mixed-type-label").innerHTML = data.treeData.classes.length + " Outcomes";
 		let table = document.getElementById("mixed-behavior-table");
 		this._renderBehaviorTable(data.treeData.classes, data.treeData.cardinality, table);
 		let loading = document.getElementById("loading-indicator");
@@ -194,11 +182,7 @@ let CytoscapeEditor = {
 			} else {
 				renderAttributeTable(data.id, data.treeData["attributes"], data.treeData.cardinality);
 			}			
-		};
-		let stabilityButton = document.getElementById("mixed-stability-analysis-button");
-		let stabilityDropdown = document.getElementById("mixed-stability-dropdown");
-		let stabilityContainer = document.getElementById("mixed-stability-analysis");
-		initStabilityButton(data.treeData.id, stabilityButton, stabilityDropdown, stabilityContainer);		
+		};	
 	},
 
 	_renderBehaviorTable(classes, totalCardinality, table) {
@@ -252,11 +236,7 @@ let CytoscapeEditor = {
 			conditions += "<span class='" + color + "'> ‣ " + attribute + "</span><br>";
 			source = this._cytoscape.edges("[target = \""+pathId+"\"]");
 		}
-		document.getElementById("leaf-necessary-conditions").innerHTML = conditions;
-		let stabilityButton = document.getElementById("leaf-stability-analysis-button");
-		let stabilityDropdown = document.getElementById("leaf-stability-dropdown");
-		let stabilityContainer = document.getElementById("leaf-stability-analysis");
-		initStabilityButton(data.treeData.id, stabilityButton, stabilityDropdown, stabilityContainer);		
+		document.getElementById("leaf-necessary-conditions").innerHTML = conditions;	
 
 		// Show additional phenotypes if this is a leaf that was created due to precision.
 		let table = document.getElementById("leaf-behavior-table");		
@@ -341,7 +321,6 @@ let CytoscapeEditor = {
   					'selector': 'node[type = "leaf"]',
   					'style': {  						
   						'border-color': '#546E7A',
-  						'font-family': 'symbols',
   						'font-size': '16pt',
   					}  					
   				},
@@ -491,7 +470,7 @@ let CytoscapeEditor = {
 		} else if (treeData.type == "decision") {
 			data.label = treeData.attribute_name;
 		} else if (treeData.type == "unprocessed" ) {
-			data.label = "Mixed Phenotype\n" + "(" + treeData.classes.length + " types)";
+			data.label = "Mixed outcomes\n" + "(" + treeData.classes.length + " types)";
 		} else {
 			data.label = treeData.type + "(" + treeData.id + ")";
 		}
@@ -504,7 +483,9 @@ let CytoscapeEditor = {
 	},
 
 	_normalizeClass(cls) {
-		return JSON.parse(cls).map(x => x[0]).sort().join('');
+		//return JSON.parse(cls).map(x => x[0]).sort().join('');
+		console.log(cls);
+		return cls.toString();
 	},
 
 	removeNode(nodeId) {

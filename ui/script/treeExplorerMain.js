@@ -232,7 +232,7 @@ function renderAttributeTable(id, attributes, totalCardinality) {
 			let row = `
 				<tr ${style}>
                 	<td class="distribution">${Math_percent(cls.cardinality, leftTotal)}%</td>
-                	<td class="symbols phenotype">${CytoscapeEditor._normalizeClass(cls.class)}</td>
+                	<td class="phenotype">${CytoscapeEditor._normalizeClass(cls.class)}</td>
             	</tr>
             `;
             return html + row;
@@ -245,7 +245,7 @@ function renderAttributeTable(id, attributes, totalCardinality) {
 			}
 			let row = `
 				<tr ${style}>
-                	<td class="symbols phenotype">${CytoscapeEditor._normalizeClass(cls.class)}</td>
+                	<td class="phenotype">${CytoscapeEditor._normalizeClass(cls.class)}</td>
                 	<td class="distribution">${Math_percent(cls.cardinality, rightTotal)}%</td>
             	</tr>
             `;
@@ -307,6 +307,7 @@ function loadBifurcationTree(fit = true) {
 		if (r !== undefined && r.length > 0) {
 			CytoscapeEditor.removeAll();	// remove old tree if present
 			for (node of r) {
+				console.log("Ensure node:", node);
 				CytoscapeEditor.ensureNode(node);
 			}
 			for (node of r) {
@@ -540,23 +541,6 @@ hotkeys('h', { keyup: true }, function(event, handler) {
 	if (event.type === 'keyup') {
 		document.getElementById("quick-help").classList.add("gone");
 	}	
-});
-
-hotkeys('s', function(event, handler) {
-	let panel = document.getElementById("mixed-info");
-	if (!panel.classList.contains("gone")) {
-		fireEvent(document.getElementById("mixed-stability-analysis-button"), "click");
-	}
-
-	panel = document.getElementById("decision-info");
-	if (!panel.classList.contains("gone")) {
-		fireEvent(document.getElementById("decision-stability-analysis-button"), "click");
-	}
-
-	panel = document.getElementById("leaf-info");
-	if (!panel.classList.contains("gone")) {
-		fireEvent(document.getElementById("leaf-stability-analysis-button"), "click");
-	}
 });
 
 hotkeys('d', function(event, handler) {

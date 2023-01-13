@@ -553,7 +553,7 @@ div.invisible-input[contenteditable]:empty:not(:focus):before {
 }
 
 #tab-results .table-behavior {
-    font-family: 'symbols';
+    /*font-family: 'symbols';*/
     letter-spacing: 5px;
     font-style: normal;
 }
@@ -676,13 +676,31 @@ div.center {
     padding-top: 4px;
     padding-bottom: 4px;
 }
+
+.behavior-table tr:nth-child(even) {
+    /*background-color: #ECEFF1;*/
+    background-color: #CFD8DC;
+}
+
 .behavior-table .cell-behavior {
-    width: 200px;
+    width: 190px;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .behavior-table .cell-witness-count,
 .behavior-table .cell-distribution {
-    width: 125px;
+    width: 130px;
+}
+
+#leaf-behavior-table::before {
+    content: "All outcomes:";
+    text-align: center;
+    display: block;
+    width: 468px;
+    font-size: 1.2rem;
+    margin-top: 8px;
+    margin-bottom: 4px;
 }
 
 #transparency-switch {
@@ -752,7 +770,7 @@ div.center {
 }
 
 .attribute-sub-panel td.distribution {
-    width: 39px;
+    width: 42px;
 }
 
 .attribute-sub-panel table.collapsed tr.extra {

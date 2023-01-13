@@ -11,16 +11,12 @@ use biodivine_aeon_server::scc::Classifier;
 use biodivine_lib_param_bn::biodivine_std::traits::Set;
 use biodivine_lib_param_bn::BooleanNetwork;
 use biodivine_lib_param_bn::symbolic_async_graph::{GraphColoredVertices, SymbolicAsyncGraph};
+use json::JsonValue;
 use tauri::State;
-use crate::bdt::{Bdt, Outcome};
+use crate::bdt::{AttributeId, Bdt, BdtNodeId, Outcome};
 
 pub mod bdt;
 pub mod util;
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-  format!("Hello, {}!", name)
-}
 
 fn attractors(stg: &SymbolicAsyncGraph, set: &GraphColoredVertices) -> Vec<GraphColoredVertices> {
     let mut results: Vec<GraphColoredVertices> = Vec::new();
@@ -50,14 +46,88 @@ fn attractors(stg: &SymbolicAsyncGraph, set: &GraphColoredVertices) -> Vec<Graph
 }
 
 #[tauri::command]
-fn get_tree_precision(tree: State<Mutex<Bdt>>) -> String {
-    format!("{}", tree.lock().unwrap().get_precision())
+async fn get_tree_precision(tree: State<'_, Mutex<Bdt>>) -> Result<String, String> {
+    Ok(format!("{}", tree.lock().unwrap().get_precision()))
 }
 
 #[tauri::command]
-fn set_tree_precision(tree: State<Mutex<Bdt>>, precision: u32) {
+async fn set_tree_precision(tree: State<'_, Mutex<Bdt>>, precision: u32) -> Result<(), String> {
     let mut tree = tree.lock().unwrap();
-    tree.set_precision(precision)
+    tree.set_precision(precision);
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_decision_tree(tree: State<'_, Mutex<Bdt>>) -> Result<String, String> {
+    let tree = tree.lock().unwrap();
+    Ok(tree.to_json().to_string())
+}
+
+#[tauri::command]
+async fn auto_expand_tree(tree: State<'_, Mutex<Bdt>>, node_id: usize, depth: u32) -> Result<String, String> {
+    if depth > 10 {
+        return Err("Maximum allowed depth is 10.".to_string());
+    }
+    let mut tree = tree.lock().unwrap();
+    let node_id: BdtNodeId = if let Some(node_id) = BdtNodeId::try_from(node_id, &tree) {
+        node_id
+    } else {
+        return Err(format!("Invalid node id {}.", node_id));
+    };
+    let changed = tree.auto_expand(node_id, depth);
+    Ok(tree.to_json_partial(&changed).to_string())
+}
+
+#[tauri::command]
+async fn get_decision_attributes(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<String, String> {
+    let tree = tree.lock().unwrap();
+    let node = BdtNodeId::try_from(node_id, &tree);
+    let node = if let Some(node) = node {
+        node
+    } else {
+        return Err(format!("Invalid node id {}.", node_id));
+    };
+
+    Ok(tree.attribute_gains_json(node).to_string())
+}
+
+#[tauri::command]
+async fn apply_decision_attribute(tree: State<'_, Mutex<Bdt>>, node_id: usize, attribute_id: usize) -> Result<String, String> {
+    let mut tree = tree.lock().unwrap();
+    let Some(node) = BdtNodeId::try_from(node_id, &tree) else {
+        return Err(format!("Invalid node id {}.", node_id));
+    };
+    let Some(attribute) = AttributeId::try_from(attribute_id, &tree) else {
+        return Err(format!("Invalid attribute id {}.", attribute_id));
+    };
+    if let Ok((left, right)) = tree.make_decision(node, attribute) {
+        let changes = array![
+                tree.node_to_json(node),
+                tree.node_to_json(left),
+                tree.node_to_json(right),
+            ];
+        Ok(changes.to_string())
+    } else {
+        Err("Invalid node or attribute id.".to_string())
+    }
+}
+
+#[tauri::command]
+async fn revert_decision(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<String, String> {
+    let mut tree = tree.lock().unwrap();
+    let Some(node) = BdtNodeId::try_from(node_id, &tree) else {
+        return Err(format!("Invalid node id {}.", node_id));
+    };
+    let removed = tree.revert_decision(node);
+    let removed = removed
+        .into_iter()
+        .map(|v| v.to_index())
+        .collect::<Vec<_>>();
+    let response = object! {
+                "node": tree.node_to_json(node),
+                "removed": JsonValue::from(removed)
+        };
+    Ok(response.to_string())
 }
 
 fn main() {
@@ -70,14 +140,22 @@ fn main() {
         classification.add_component(attractor.clone(), &stg);
     }
     let mut outcomes = HashMap::new();
-    for (i, (c, _)) in classification.export_components().iter().enumerate() {
-        outcomes.insert(Outcome::from(i), c.colors());
+    for (class, set) in classification.export_result() {
+        outcomes.insert(Outcome::from(format!("{}", class)), set);
     }
-    let bdt = Bdt::new(outcomes, Vec::new());
+    let bdt = Bdt::new_from_graph(outcomes, &stg);
     println!("Found attractors: {}", attractors.len());
     tauri::Builder::default()
         .manage(Mutex::new(bdt))
-        .invoke_handler(tauri::generate_handler![greet, get_tree_precision, set_tree_precision])
+        .invoke_handler(tauri::generate_handler![
+            get_tree_precision,
+            set_tree_precision,
+            get_decision_tree,
+            auto_expand_tree,
+            get_decision_attributes,
+            apply_decision_attribute,
+            revert_decision
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

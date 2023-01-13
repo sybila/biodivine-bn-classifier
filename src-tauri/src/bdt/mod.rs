@@ -24,17 +24,17 @@ mod _impl_indexing;
 
 
 /// Outcome is one possible result of classification by the decision tree. It is just a wrapper
-/// of `usize`. You are responsible for assigning your own meaning to individual outcomes.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Outcome(usize);
+/// of `String`. You are responsible for assigning your own meaning to individual outcomes.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Outcome(String);
 
-impl From<usize> for Outcome {
-    fn from(value: usize) -> Self {
+impl From<String> for Outcome {
+    fn from(value: String) -> Self {
         Outcome(value)
     }
 }
 
-impl From<Outcome> for usize {
+impl From<Outcome> for String {
     fn from(value: Outcome) -> Self {
         value.0
     }
