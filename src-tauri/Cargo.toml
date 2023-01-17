@@ -16,9 +16,10 @@ tauri-build = { version = "1.2.1", features = [] }
 
 [dependencies]
 # Older versions are used because aeon server needs them. Once that dependency is gone, we can update.
-biodivine-lib-param-bn = "0.3.0"
-biodivine-lib-bdd = "0.4.0"
-biodivine-aeon-server = { git = "https://github.com/sybila/biodivine-aeon-server" }
+biodivine-lib-bdd = ">=0.4.2, <1.0.0"
+biodivine-lib-param-bn = "0.4.2"
+#biodivine-aeon-server = { git = "https://github.com/sybila/biodivine-aeon-server" }
+biodivine-hctl-model-checker = { git = "https://github.com/sybila/biodivine-hctl-model-checker" }
 json = "0.12.4"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }

@@ -1,0 +1,42 @@
+### Assertion formulae
+
+# 3{x}: (@{x}: (v_Apoptosis & v_Growth_Arrest & ~ v_Proliferation) & (AG EF (v_Apoptosis & v_Growth_Arrest & ~ v_Proliferation & {x})))
+15 colors satisfy all assertions
+
+### Property formulae individually
+
+# 3{x}: (3{y}: (@{x}: (AX~{y}) & (AX {x})) & (@{y}: AX {y}))
+1 colors satisfy this property
+
+# 3{x}: (@{x}: AX {x})
+9 colors satisfy this property
+
+# 3{x}: (@{x}: (~(AX {x}) & AG EF {x}))
+6 colors satisfy this property
+
+### Categories
+
+# 000
+0 colors in this category
+
+# 001
+6 colors in this category
+
+# 010
+8 colors in this category
+
+# 011
+0 colors in this category
+
+# 100
+0 colors in this category
+
+# 101
+0 colors in this category
+
+# 110
+1 colors in this category
+
+# 111
+0 colors in this category
+

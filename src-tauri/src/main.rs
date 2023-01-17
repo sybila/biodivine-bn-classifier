@@ -6,18 +6,27 @@
 extern crate json;
 
 use crate::bdt::{AttributeId, Bdt, BdtNodeId, Outcome};
-use biodivine_aeon_server::scc::Classifier;
-use biodivine_lib_param_bn::biodivine_std::traits::Set;
-use biodivine_lib_param_bn::symbolic_async_graph::{GraphColoredVertices, SymbolicAsyncGraph};
+
+//use biodivine_aeon_server::scc::Classifier;
+use biodivine_hctl_model_checker::model_checking::get_extended_symbolic_graph;
+
+//use biodivine_lib_param_bn::biodivine_std::traits::Set;
+//use biodivine_lib_param_bn::symbolic_async_graph::{GraphColoredVertices, SymbolicAsyncGraph};
+use biodivine_lib_param_bn::symbolic_async_graph::GraphColors;
 use biodivine_lib_param_bn::BooleanNetwork;
+
 use json::JsonValue;
+
 use std::collections::HashMap;
+use std::fs::{read_dir, read_to_string, File};
+use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 
 pub mod bdt;
 pub mod util;
 
+/*
 const TEST_MODEL: &str = r#"
 CtrA -> CtrA
 GcrA -> CtrA
@@ -64,6 +73,7 @@ fn attractors(stg: &SymbolicAsyncGraph, set: &GraphColoredVertices) -> Vec<Graph
     }
     results
 }
+ */
 
 #[tauri::command]
 async fn get_tree_precision(tree: State<'_, Mutex<Bdt>>) -> Result<String, String> {
@@ -162,6 +172,7 @@ async fn revert_decision(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<
 }
 
 fn main() {
+    /*
     let model = BooleanNetwork::try_from(TEST_MODEL).unwrap();
     let stg = SymbolicAsyncGraph::new(model).unwrap();
     println!("Start attractors.");
@@ -170,12 +181,78 @@ fn main() {
     for attractor in &attractors {
         classification.add_component(attractor.clone(), &stg);
     }
+
     let mut outcomes = HashMap::new();
     for (class, set) in classification.export_result() {
         outcomes.insert(Outcome::from(format!("{class}")), set);
     }
     let bdt = Bdt::new_from_graph(outcomes, &stg);
+
     println!("Found attractors: {}", attractors.len());
+    tauri::Builder::default()
+        .manage(Mutex::new(bdt))
+        .invoke_handler(tauri::generate_handler![
+            get_tree_precision,
+            set_tree_precision,
+            get_decision_tree,
+            auto_expand_tree,
+            get_decision_attributes,
+            apply_decision_attribute,
+            revert_decision
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+     */
+
+    // file with original model and dir with classification results
+    let model_path = "../benchmark-models/test-mapk/mapk1.aeon";
+    let results_dir = "../benchmark-models/test-mapk/results";
+    let metadata_file_path = PathBuf::from(results_dir).join("metadata.txt");
+
+    // load the number of HCTL vars used during classification computation
+    let num_hctl_vars: u16 = read_to_string(metadata_file_path)
+        .unwrap()
+        .parse::<u16>()
+        .unwrap();
+
+    // load the BN model and generate the extended STG
+    let model_string = read_to_string(model_path).unwrap();
+    let bn = BooleanNetwork::try_from(model_string.as_str()).unwrap();
+    let graph = get_extended_symbolic_graph(&bn, num_hctl_vars);
+
+    // only BDD dumps (individual files) and a report&metadata are expected in the dir (for now)
+    let files = read_dir(results_dir).unwrap();
+
+    // collect the classification outcomes (colored sets) from the individual BDD dumps
+    let mut outcomes = HashMap::new();
+    for file in files {
+        let path = file.unwrap().path().clone();
+        let file_name = path.file_name().unwrap().to_str().unwrap();
+        if file_name == "report.txt" || file_name == "metadata.txt" {
+            continue;
+        }
+        let mut file = File::open(path.clone()).unwrap();
+
+        // read the raw BDD, convert into color set
+        let bdd = biodivine_lib_bdd::Bdd::read_as_string(&mut file).unwrap();
+        let color_set = GraphColors::new(bdd, graph.symbolic_context());
+
+        // only collect non-empty categories
+        if color_set.approx_cardinality() > 0. {
+            let set_name = file_name
+                .strip_prefix("bdd_dump_")
+                .unwrap()
+                .strip_suffix(".txt")
+                .unwrap();
+
+            outcomes.insert(
+                Outcome::from(format!("{}", set_name)),
+                color_set
+            );
+        }
+    }
+
+    let bdt = Bdt::new_from_graph(outcomes, &graph);
     tauri::Builder::default()
         .manage(Mutex::new(bdt))
         .invoke_handler(tauri::generate_handler![
