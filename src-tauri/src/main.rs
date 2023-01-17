@@ -237,7 +237,7 @@ fn main() {
         let bdd = biodivine_lib_bdd::Bdd::read_as_string(&mut file).unwrap();
         let color_set = GraphColors::new(bdd, graph.symbolic_context());
 
-        // only collect non-empty categories
+        // only collect non-empty categories (in case some empty sets appear)
         if color_set.approx_cardinality() > 0. {
             let set_name = file_name
                 .strip_prefix("bdd_dump_")
