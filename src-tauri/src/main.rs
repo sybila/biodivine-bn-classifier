@@ -204,10 +204,14 @@ fn main() {
         .expect("error while running tauri application");
      */
 
+    let model_dir = "../benchmark-models/tlgl/";
+
     // file with original model and dir with classification results
-    let model_path = "../benchmark-models/test-mapk/mapk1.aeon";
-    let results_dir = "../benchmark-models/test-mapk/results";
-    let metadata_file_path = PathBuf::from(results_dir).join("metadata.txt");
+    let model_path = PathBuf::from(model_dir).join("model.aeon");
+    // directory with classification results
+    let results_dir = PathBuf::from(model_dir).join("results");
+    // file containing computation metadata
+    let metadata_file_path = results_dir.join("metadata.txt");
 
     // load the number of HCTL vars used during classification computation
     let num_hctl_vars: u16 = read_to_string(metadata_file_path)
