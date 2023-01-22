@@ -1,27 +1,28 @@
 #![cfg_attr(
-    all(not(debug_assertions), target_os = "windows"),
-    windows_subsystem = "windows"
+all(not(debug_assertions), target_os = "windows"),
+windows_subsystem = "windows"
 )]
 #[macro_use]
 extern crate json;
 
 use crate::bdt::{AttributeId, Bdt, BdtNodeId, Outcome};
 
+use biodivine_lib_bdd::Bdd;
 //use biodivine_aeon_server::scc::Classifier;
 use biodivine_hctl_model_checker::model_checking::get_extended_symbolic_graph;
-
 //use biodivine_lib_param_bn::biodivine_std::traits::Set;
 //use biodivine_lib_param_bn::symbolic_async_graph::{GraphColoredVertices, SymbolicAsyncGraph};
 use biodivine_lib_param_bn::symbolic_async_graph::GraphColors;
 use biodivine_lib_param_bn::BooleanNetwork;
 
 use json::JsonValue;
-
 use std::collections::HashMap;
-use std::fs::{read_dir, read_to_string, File};
+use std::fs::{read_to_string, File};
+use std::io::Read;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
+use zip::ZipArchive;
 
 pub mod bdt;
 pub mod util;
@@ -204,41 +205,46 @@ fn main() {
         .expect("error while running tauri application");
      */
 
-    let model_dir = "../benchmark-models/tlgl/";
+    let model_dir = "../benchmarks/mapk1/";
 
     // file with original model and dir with classification results
     let model_path = PathBuf::from(model_dir).join("model.aeon");
-    // directory with classification results
-    let results_dir = PathBuf::from(model_dir).join("results");
-    // file containing computation metadata
-    let metadata_file_path = results_dir.join("metadata.txt");
+    // zip archive with classification results
+    let results_archive = PathBuf::from(model_dir).join("results.zip");
+
 
     // load the number of HCTL vars used during classification computation
-    let num_hctl_vars: u16 = read_to_string(metadata_file_path)
-        .unwrap()
-        .parse::<u16>()
-        .unwrap();
+    let archive_file = File::open(results_archive).unwrap();
+    let mut archive = ZipArchive::new(archive_file).unwrap();
+
+    // load number of HCTL variables from computation metadata
+    let mut metadata_file = archive.by_name("metadata.txt").unwrap();
+    let mut buffer = String::new();
+    metadata_file.read_to_string(&mut buffer).unwrap();
+    let num_hctl_vars: u16 = buffer.parse::<u16>().unwrap();
+    drop(metadata_file);
 
     // load the BN model and generate the extended STG
     let model_string = read_to_string(model_path).unwrap();
     let bn = BooleanNetwork::try_from(model_string.as_str()).unwrap();
     let graph = get_extended_symbolic_graph(&bn, num_hctl_vars);
 
-    // only BDD dumps (individual files) and a report&metadata are expected in the dir (for now)
-    let files = read_dir(results_dir).unwrap();
-
     // collect the classification outcomes (colored sets) from the individual BDD dumps
     let mut outcomes = HashMap::new();
-    for file in files {
-        let path = file.unwrap().path().clone();
-        let file_name = path.file_name().unwrap().to_str().unwrap();
-        if file_name == "report.txt" || file_name == "metadata.txt" {
+
+    // iterate over all files by indices
+    // only BDD dumps (individual files) and a report&metadata are expected in the archive (for now)
+    for idx in 0..archive.len() {
+        let mut entry = archive.by_index(idx).unwrap();
+        let file_name = entry.name().to_string();
+        if file_name == *"report.txt" || file_name == *"metadata.txt" {
             continue;
         }
-        let mut file = File::open(path.clone()).unwrap();
 
-        // read the raw BDD, convert into color set
-        let bdd = biodivine_lib_bdd::Bdd::read_as_string(&mut file).unwrap();
+        // read the raw BDD and convert into the color set
+        let mut bdd_str = String::new();
+        entry.read_to_string(&mut bdd_str).unwrap();
+        let bdd = Bdd::from_string(bdd_str.as_str());
         let color_set = GraphColors::new(bdd, graph.symbolic_context());
 
         // only collect non-empty categories (in case some empty sets appear)

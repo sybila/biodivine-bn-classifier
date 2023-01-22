@@ -22,6 +22,7 @@ json = "0.12.4"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.2.2", features = ["dialog-all"] }
+zip = "0.6.3"
 
 # Include Z3 dependencies as strictly as possible, we don't want
 # this to change because it might break our release builds.
