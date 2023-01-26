@@ -1,19 +1,18 @@
 #![cfg_attr(
-all(not(debug_assertions), target_os = "windows"),
-windows_subsystem = "windows"
+    all(not(debug_assertions), target_os = "windows"),
+    windows_subsystem = "windows"
 )]
+
 #[macro_use]
 extern crate json;
 
 use crate::bdt::{AttributeId, Bdt, BdtNodeId, Outcome};
 
-use biodivine_lib_bdd::Bdd;
-//use biodivine_aeon_server::scc::Classifier;
 use biodivine_hctl_model_checker::model_checking::get_extended_symbolic_graph;
-//use biodivine_lib_param_bn::biodivine_std::traits::Set;
-//use biodivine_lib_param_bn::symbolic_async_graph::{GraphColoredVertices, SymbolicAsyncGraph};
+use biodivine_lib_bdd::Bdd;
+use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
+
 use biodivine_lib_param_bn::symbolic_async_graph::GraphColors;
-use biodivine_lib_param_bn::BooleanNetwork;
 
 use json::JsonValue;
 use std::collections::HashMap;
@@ -26,55 +25,6 @@ use zip::ZipArchive;
 
 pub mod bdt;
 pub mod util;
-
-/*
-const TEST_MODEL: &str = r#"
-CtrA -> CtrA
-GcrA -> CtrA
-CcrM -| CtrA
-SciP -| CtrA
-CtrA -| GcrA
-DnaA -> GcrA
-CtrA -> CcrM
-CcrM -| CcrM
-SciP -| CcrM
-CtrA -> SciP
-DnaA -| SciP
-$SciP:CtrA & !DnaA
-CtrA -> DnaA
-GcrA -| DnaA
-DnaA -| DnaA
-CcrM -> DnaA
-$DnaA:CtrA & CcrM & !(GcrA | DnaA)
-"#;
-
-fn attractors(stg: &SymbolicAsyncGraph, set: &GraphColoredVertices) -> Vec<GraphColoredVertices> {
-    let mut results: Vec<GraphColoredVertices> = Vec::new();
-    let root_stg = stg;
-
-    // Restricted STG containing only the remaining vertices.
-    let mut active_stg = root_stg.restrict(set);
-    while !active_stg.unit_colored_vertices().is_empty() {
-        // Pick a (colored) vertex and compute the backward-reachable basin.
-        let pivot = active_stg.unit_colored_vertices().pick_vertex();
-        let pivot_basin = active_stg.reach_backward(&pivot);
-        let pivot_fwd = active_stg.reach_forward(&pivot);
-
-        let scc = pivot_fwd.intersect(&pivot_basin);
-        let non_terminal = pivot_fwd.minus(&pivot_basin).colors();
-        let bottom = scc.minus_colors(&non_terminal);
-
-        // If there is something remaining in the pivot component, report it as attractor.
-        if !bottom.is_empty() {
-            results.push(bottom);
-        }
-
-        // Further restrict the STG by removing the current basin.
-        active_stg = active_stg.restrict(&active_stg.unit_colored_vertices().minus(&pivot_basin));
-    }
-    results
-}
- */
 
 #[tauri::command]
 async fn get_tree_precision(tree: State<'_, Mutex<Bdt>>) -> Result<String, String> {
@@ -172,48 +122,29 @@ async fn revert_decision(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<
     Ok(response.to_string())
 }
 
+fn extract_sorted_prop_names(aeon_str: &str) -> Vec<String> {
+    let annotation = ModelAnnotation::from_model_string(aeon_str);
+
+    let mut prop_names: Vec<String> = Vec::new();
+    // properties are expected as:     #!dynamic_property: NAME: FORMULA
+    let properties_node = annotation.get_child(&["dynamic_property"]).unwrap();
+    for (path, _) in properties_node.children() {
+        prop_names.push(path.clone());
+    }
+
+    // sort them
+    prop_names.sort();
+    prop_names
+}
+
 fn main() {
-    /*
-    let model = BooleanNetwork::try_from(TEST_MODEL).unwrap();
-    let stg = SymbolicAsyncGraph::new(model).unwrap();
-    println!("Start attractors.");
-    let attractors = attractors(&stg, stg.unit_colored_vertices());
-    let classification = Classifier::new(&stg);
-    for attractor in &attractors {
-        classification.add_component(attractor.clone(), &stg);
-    }
+    let model_dir = "../benchmarks/mapk2/";
 
-    let mut outcomes = HashMap::new();
-    for (class, set) in classification.export_result() {
-        outcomes.insert(Outcome::from(format!("{class}")), set);
-    }
-    let bdt = Bdt::new_from_graph(outcomes, &stg);
-
-    println!("Found attractors: {}", attractors.len());
-    tauri::Builder::default()
-        .manage(Mutex::new(bdt))
-        .invoke_handler(tauri::generate_handler![
-            get_tree_precision,
-            set_tree_precision,
-            get_decision_tree,
-            auto_expand_tree,
-            get_decision_attributes,
-            apply_decision_attribute,
-            revert_decision
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-     */
-
-    let model_dir = "../benchmarks/mapk1/";
-
-    // file with original model and dir with classification results
-    let model_path = PathBuf::from(model_dir).join("model.aeon");
+    // file with original input containing the model (with formulae as annotations)
+    let model_path = PathBuf::from(model_dir).join("sketch.aeon");
     // zip archive with classification results
     let results_archive = PathBuf::from(model_dir).join("results.zip");
 
-
-    // load the number of HCTL vars used during classification computation
     let archive_file = File::open(results_archive).unwrap();
     let mut archive = ZipArchive::new(archive_file).unwrap();
 
@@ -225,9 +156,12 @@ fn main() {
     drop(metadata_file);
 
     // load the BN model and generate the extended STG
-    let model_string = read_to_string(model_path).unwrap();
-    let bn = BooleanNetwork::try_from(model_string.as_str()).unwrap();
+    let aeon_str = read_to_string(model_path.to_str().unwrap()).unwrap();
+    let bn = BooleanNetwork::try_from(aeon_str.as_str()).unwrap();
     let graph = get_extended_symbolic_graph(&bn, num_hctl_vars);
+
+    // load the property names from model annotations (to later display them)
+    let prop_names = extract_sorted_prop_names(aeon_str.as_str());
 
     // collect the classification outcomes (colored sets) from the individual BDD dumps
     let mut outcomes = HashMap::new();
@@ -249,16 +183,31 @@ fn main() {
 
         // only collect non-empty categories (in case some empty sets appear)
         if color_set.approx_cardinality() > 0. {
-            let set_name = file_name
+            // set ID is vector of 0/1 telling which props are satisfied in given class
+            let set_id = file_name
                 .strip_prefix("bdd_dump_")
                 .unwrap()
                 .strip_suffix(".txt")
                 .unwrap();
 
-            outcomes.insert(
-                Outcome::from(format!("{}", set_name)),
-                color_set
-            );
+            // set names combines sorted names of properties that are satisfied
+            let mut set_name = String::new();
+            let mut empty = true;
+            for (i, indicator) in set_id.chars().enumerate() {
+                if indicator == '1' {
+                    if empty {
+                        set_name.push_str(prop_names[i].as_str());
+                    } else {
+                        set_name.push_str(format!(" + {}", prop_names[i]).as_str());
+                    }
+                    empty = false;
+                }
+            }
+            if empty {
+                set_name.push('-');
+            }
+
+            outcomes.insert(Outcome::from(set_name), color_set);
         }
     }
 
