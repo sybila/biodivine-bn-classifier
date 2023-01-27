@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/sybila/biodivine-hctl-explorer"
 default-run = "hctl-property-explorer"
 edition = "2021"
-rust-version = "1.59"
+rust-version = "1.60"
 
 [build-dependencies]
 tauri-build = { version = "1.2.1", features = [] }
@@ -15,8 +15,9 @@ tauri-build = { version = "1.2.1", features = [] }
 [dependencies]
 biodivine-lib-bdd = ">=0.4.2, <1.0.0"
 #biodivine-lib-param-bn = "0.4.2"
-biodivine-lib-param-bn = { git = "https://github.com/sybila/biodivine-lib-param-bn", branch = "dev-annotations" }
+biodivine-lib-param-bn = { git = "https://github.com/sybila/biodivine-lib-param-bn", branch = "master" }
 biodivine-hctl-model-checker = { git = "https://github.com/sybila/biodivine-hctl-model-checker", branch = "dev-classification-experiments" }
+clap = { version = "4.1.1", features = ["derive"] }
 json = "0.12.4"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }

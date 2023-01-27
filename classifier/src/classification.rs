@@ -1,6 +1,5 @@
 //! Components regarding the BN classification based on HCTL properties
 
-use crate::load_input::extract_properties_from_aeon;
 use crate::write_output::{write_class_report_and_dump_bdds, write_empty_report};
 
 use biodivine_hctl_model_checker::model_checking::{
@@ -15,10 +14,46 @@ use biodivine_lib_param_bn::biodivine_std::traits::Set;
 use biodivine_lib_param_bn::symbolic_async_graph::{
     GraphColoredVertices, GraphColors, SymbolicAsyncGraph,
 };
-use biodivine_lib_param_bn::BooleanNetwork;
+use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
 
 use std::collections::{HashMap, HashSet};
 use std::fs::read_to_string;
+
+type NamedFormulaeVec = Vec<(String, String)>;
+
+/// Get the HCTL formulae from annotations of aeon model.
+/// Assertion formulae are expected in a form:   #!dynamic_assertion: FORMULA
+/// Properties are expected in a form:           #!dynamic_property: NAME: FORMULA
+///
+/// Return set of annotations (in order) and set of named properties (in random order).
+pub fn extract_formulae_from_aeon(
+    aeon_string: &str,
+) -> Result<(Vec<String>, NamedFormulaeVec), String> {
+    let annotation = ModelAnnotation::from_model_string(aeon_string);
+
+    let mut assertions: Vec<String> = Vec::new();
+    // assertions are expected as:     #!dynamic_assertion: FORMULA
+    let assertions_node = annotation.get_child(&["dynamic_assertion"]).unwrap();
+    for value in assertions_node.value().unwrap().as_str().lines() {
+        assertions.push(value.to_string())
+    }
+
+    let mut named_properties: NamedFormulaeVec = Vec::new();
+    // properties are expected as:     #!dynamic_property: NAME: FORMULA
+    let properties_node = annotation.get_child(&["dynamic_property"]).unwrap();
+    for (path, child) in properties_node.children() {
+        if let Some(property) = child.value() {
+            if property.lines().count() > 1 {
+                return Err("Properties cannot share names.".to_string());
+            }
+            named_properties.push((path.clone(), property.clone()))
+        } else {
+            return Err("Property annotation can't be that nested.".to_string());
+        }
+    }
+
+    Ok((assertions, named_properties))
+}
 
 /// Parse formulae into syntax trees, and count maximal number of HCTL variables in a formula
 fn parse_formulae_and_count_vars(
@@ -50,9 +85,8 @@ fn combine_assertions(formulae: Vec<String>) -> String {
         conjunction.push_str(format!("({}) & ", formula).as_str());
     }
 
-    // this ensures that formula does not end with "&"
-    // Moreover, even if there are no assertions, resulting formula won't be empty and will be
-    // satisfied in all colors
+    // If there are no assertions, resulting formula won't be empty and will be satisfied by
+    // all colors (moreover, it ensures that formula does not end with "&")
     conjunction.push_str("true");
 
     conjunction
@@ -70,7 +104,7 @@ fn get_universal_colors(
 }
 
 /// Extract properties from name-property pairs.
-fn extract_properties(named_props: Vec<(String, String)>) -> Vec<String> {
+pub fn extract_properties(named_props: NamedFormulaeVec) -> Vec<String> {
     let mut properties = Vec::new();
     for (_, prop) in named_props {
         properties.push(prop.clone());
@@ -79,7 +113,7 @@ fn extract_properties(named_props: Vec<(String, String)>) -> Vec<String> {
 }
 
 /// Perform the classification of Boolean networks based on given properties.
-/// Takes a path to a file in `extended AEON` format containing a partially defined BN model
+/// Takes a path to a file in annotated `AEON` format containing a partially defined BN model
 /// and 2 sets of HCTL formulae. Assertions are formulae that must be satisfied, and properties
 /// are formulae used for classification.
 ///
@@ -94,7 +128,7 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
     // load the model and two sets of formulae (from model annotations)
     let aeon_str = read_to_string(input_path).unwrap();
     let bn = BooleanNetwork::try_from(aeon_str.as_str())?;
-    let (assertions, mut named_properties) = extract_properties_from_aeon(aeon_str.as_str()).unwrap();
+    let (assertions, mut named_properties) = extract_formulae_from_aeon(aeon_str.as_str()).unwrap();
     println!("Loaded all inputs.");
 
     // sort the properties by their names, and extract them
@@ -107,7 +141,7 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
 
     // preproc all formulae at once - parse, compute max num of vars
     // it is crucial to include all formulae when computing number of HCTL vars needed
-    let mut all_formulae = properties.clone();
+    let mut all_formulae = properties;
     all_formulae.push(single_assertion);
     let (mut all_trees, num_hctl_vars) = parse_formulae_and_count_vars(&bn, all_formulae)?;
 
@@ -158,7 +192,30 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::classification::combine_assertions;
+    use crate::classification::{
+        combine_assertions, extract_formulae_from_aeon, extract_properties,
+        parse_formulae_and_count_vars,
+    };
+    use biodivine_lib_param_bn::BooleanNetwork;
+
+    #[test]
+    /// Test the formulae parsing and variable counting
+    fn test_formulae_variable_count() {
+        let aeon_str = r"
+            $v_2:!v_3
+            v_3 -| v_2
+            $v_3:v_3
+            v_3 -> v_3
+        ";
+        let bn = BooleanNetwork::try_from(aeon_str).unwrap();
+        let formulae = vec![
+            "!{x}: AX {x}".to_string(),
+            "!{y}: (AG EF {y} & (!{z}: AX {z}))".to_string(),
+        ];
+
+        let (_, var_count) = parse_formulae_and_count_vars(&bn, formulae).unwrap();
+        assert_eq!(var_count, 2);
+    }
 
     #[test]
     /// Test combining of assertion formulae into one conjunction formula.
@@ -179,5 +236,63 @@ mod tests {
             combine_assertions(vec![formula1, formula2, formula3]),
             "(3{x}: @{x}: AX {x}) & (false) & (a & b) & true".to_string(),
         )
+    }
+
+    #[test]
+    /// Test extracting the formulae from the AEON format annotations.
+    fn test_extracting_formulae() {
+        let aeon_str = r"
+            #! dynamic_assertion: #`true`#
+            #! dynamic_assertion: #`3{x}: @{x}: AX {x}`#
+            #! dynamic_property: p1: #`3{x}: @{x}: AG EF {x}`#
+            #! dynamic_property: p2: #`3{x}: @{x}: AX AF {x}`#
+            $v_2:!v_3
+            v_3 -| v_2
+            $v_3:v_3
+            v_3 -> v_3
+        ";
+
+        let (assertions, named_properties) = extract_formulae_from_aeon(aeon_str).unwrap();
+
+        assert_eq!(
+            assertions,
+            vec!["true".to_string(), "3{x}: @{x}: AX {x}".to_string()]
+        );
+
+        assert_eq!(named_properties.len(), 2);
+        assert!(named_properties.contains(&("p1".to_string(), "3{x}: @{x}: AG EF {x}".to_string())));
+        assert!(named_properties.contains(&("p2".to_string(), "3{x}: @{x}: AX AF {x}".to_string())));
+    }
+
+    #[test]
+    /// Test that extracting entities from the corrupted AEON format annotations.
+    fn test_extracting_formulae_corrupted() {
+        let aeon_str = r"
+            #! dynamic_assertion: #`true`#
+            #! dynamic_property: p1: #`3{x}: @{x}: AG EF {x}`#
+            #! dynamic_property: p1: #`3{x}: @{x}: AX {x}`#
+            $v_2:!v_3
+            v_3 -| v_2
+            $v_3:v_3
+            v_3 -> v_3
+        ";
+        assert!(extract_formulae_from_aeon(aeon_str).is_err());
+        assert_eq!(
+            extract_formulae_from_aeon(aeon_str).err().unwrap(),
+            "Properties cannot share names.".to_string()
+        );
+    }
+
+    #[test]
+    /// Test extracting properties from name-property pairs.
+    fn test_extract_properties() {
+        let named_props = vec![
+            ("p1".to_string(), "true".to_string()),
+            ("p2".to_string(), "false".to_string()),
+        ];
+        assert_eq!(
+            extract_properties(named_props),
+            vec!["true".to_string(), "false".to_string()]
+        );
     }
 }

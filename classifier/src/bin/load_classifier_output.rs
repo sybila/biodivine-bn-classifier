@@ -23,9 +23,9 @@ struct Arguments {
 
 /// Collect the results of classification, which are BDDs representing color sets.
 ///
-/// Each BDD is dumped in a file in `results_archive`. Moreover, excluding these BDD files, the dir
-/// contains a report and a metadata file. Metadata file contains information regarding the number
-/// of extended symbolic HCTL variables supported by the BDDs.
+/// The `results_archive` contains files with each dumped BDD. Moreover, excluding these BDD files,
+/// the dir contains a report and a metadata file. Metadata file contains information regarding the
+/// number of extended symbolic HCTL variables supported by the BDDs.
 ///
 /// The file at `model_path` contains the original parametrized model that was used for the
 /// classification.

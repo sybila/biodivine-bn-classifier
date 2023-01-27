@@ -49,7 +49,7 @@ fn bool_vec_to_string(bool_vec: Vec<bool>) -> String {
 pub fn write_class_report_and_dump_bdds(
     assertion_formulae: &Vec<String>,
     all_valid_colors: GraphColors,
-    named_property_formulae: &Vec<(String, String)>,
+    named_property_formulae: &[(String, String)],
     property_results: &Vec<GraphColors>,
     archive_name: &str,
     num_hctl_vars: usize,

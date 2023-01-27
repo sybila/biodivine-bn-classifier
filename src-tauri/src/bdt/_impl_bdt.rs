@@ -3,6 +3,7 @@ use crate::bdt::{
     BdtNode, BdtNodeId, BdtNodeIds, OutcomeMap,
 };
 use crate::util::Functional;
+use crate::Outcome;
 use biodivine_lib_param_bn::biodivine_std::traits::Set;
 use biodivine_lib_param_bn::symbolic_async_graph::GraphColors;
 use std::collections::{HashMap, HashSet};
@@ -111,6 +112,13 @@ impl Bdt {
         assert!(!classes.is_empty(), "Inserting empty node.");
         if classes.len() == 1 {
             let (class, params) = classes.into_iter().next().unwrap();
+
+            // TODO: remove in future (?) - hacked to display param cardinalities in the nodes
+            let mut outcome_str = class.0;
+            outcome_str.push_str(format!(" ({})", params.exact_cardinality()).as_str());
+            let class = Outcome::from(outcome_str);
+            //
+
             self.insert_node(BdtNode::Leaf { class, params })
         } else {
             self.insert_node(BdtNode::Unprocessed { classes })

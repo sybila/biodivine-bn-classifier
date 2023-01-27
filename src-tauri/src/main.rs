@@ -11,20 +11,30 @@ use crate::bdt::{AttributeId, Bdt, BdtNodeId, Outcome};
 use biodivine_hctl_model_checker::model_checking::get_extended_symbolic_graph;
 use biodivine_lib_bdd::Bdd;
 use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
-
 use biodivine_lib_param_bn::symbolic_async_graph::GraphColors;
 
+use clap::Parser;
 use json::JsonValue;
 use std::collections::HashMap;
 use std::fs::{read_to_string, File};
 use std::io::Read;
-use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 use zip::ZipArchive;
 
 pub mod bdt;
 pub mod util;
+
+/// Structure to collect CLI arguments.
+#[derive(Parser)]
+#[clap(about = "An interactive explorer of HCTL properties through decision trees.")]
+struct Arguments {
+    /// Path to a zip archive that contains results of the classification.
+    results_archive: String,
+
+    /// Path to the original model (in aeon format) that was used for the classification.
+    model: String,
+}
 
 #[tauri::command]
 async fn get_tree_precision(tree: State<'_, Mutex<Bdt>>) -> Result<String, String> {
@@ -128,7 +138,7 @@ fn extract_sorted_prop_names(aeon_str: &str) -> Vec<String> {
     let mut prop_names: Vec<String> = Vec::new();
     // properties are expected as:     #!dynamic_property: NAME: FORMULA
     let properties_node = annotation.get_child(&["dynamic_property"]).unwrap();
-    for (path, _) in properties_node.children() {
+    for path in properties_node.children().keys() {
         prop_names.push(path.clone());
     }
 
@@ -138,12 +148,12 @@ fn extract_sorted_prop_names(aeon_str: &str) -> Vec<String> {
 }
 
 fn main() {
-    let model_dir = "../benchmarks/mapk2/";
+    let args = Arguments::parse();
 
     // file with original input containing the model (with formulae as annotations)
-    let model_path = PathBuf::from(model_dir).join("sketch.aeon");
+    let model_path = args.model;
     // zip archive with classification results
-    let results_archive = PathBuf::from(model_dir).join("results.zip");
+    let results_archive = args.results_archive;
 
     let archive_file = File::open(results_archive).unwrap();
     let mut archive = ZipArchive::new(archive_file).unwrap();
@@ -156,7 +166,7 @@ fn main() {
     drop(metadata_file);
 
     // load the BN model and generate the extended STG
-    let aeon_str = read_to_string(model_path.to_str().unwrap()).unwrap();
+    let aeon_str = read_to_string(model_path.as_str()).unwrap();
     let bn = BooleanNetwork::try_from(aeon_str.as_str()).unwrap();
     let graph = get_extended_symbolic_graph(&bn, num_hctl_vars);
 
@@ -198,7 +208,7 @@ fn main() {
                     if empty {
                         set_name.push_str(prop_names[i].as_str());
                     } else {
-                        set_name.push_str(format!(" + {}", prop_names[i]).as_str());
+                        set_name.push_str(format!(", {}", prop_names[i]).as_str());
                     }
                     empty = false;
                 }

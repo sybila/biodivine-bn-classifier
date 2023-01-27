@@ -2,14 +2,13 @@
 //!
 //! Takes a path to a model in aeon format containing a partially defined BN model and
 //! two sets of HCTL formulae - assertions that must be satisfied, and properties that are
-//! used for classification. Properties are given in a form of model annotations.
+//! used for classification. All formulae are given in a form of model annotations.
 //!
 //! First, conjunction of assertions is model-checked, and then the set of remaining colors is
-//! decomposed into categories based on properties they satisfy.
+//! decomposed into categories based on the properties they satisfy.
 //!
 
 pub mod classification;
-pub mod load_input;
 pub mod write_output;
 
 use crate::classification::classify;
