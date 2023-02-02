@@ -14,6 +14,7 @@ pub mod write_output;
 use crate::classification::classify;
 use clap::Parser;
 use std::path::Path;
+use std::time::SystemTime;
 
 /// Structure to collect CLI arguments
 #[derive(Parser)]
@@ -29,6 +30,8 @@ struct Arguments {
 
 /// Wrapper function to invoke the classifier and feed it with CLI arguments.
 fn main() {
+    let start = SystemTime::now();
+
     let args = Arguments::parse();
     println!("Loading input files...");
 
@@ -49,4 +52,6 @@ fn main() {
             classification_res.err().unwrap()
         )
     }
+
+    println!("Total computation time: {}ms", start.elapsed().unwrap().as_millis());
 }

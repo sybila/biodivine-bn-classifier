@@ -33,22 +33,24 @@ pub fn extract_formulae_from_aeon(
 
     let mut assertions: Vec<String> = Vec::new();
     // assertions are expected as:     #!dynamic_assertion: FORMULA
-    let assertions_node = annotation.get_child(&["dynamic_assertion"]).unwrap();
-    for value in assertions_node.value().unwrap().as_str().lines() {
-        assertions.push(value.to_string())
+    if let Some(assertions_node) = annotation.get_child(&["dynamic_assertion"]) {
+        for value in assertions_node.value().unwrap().as_str().lines() {
+            assertions.push(value.to_string())
+        }
     }
 
     let mut named_properties: NamedFormulaeVec = Vec::new();
     // properties are expected as:     #!dynamic_property: NAME: FORMULA
-    let properties_node = annotation.get_child(&["dynamic_property"]).unwrap();
-    for (path, child) in properties_node.children() {
-        if let Some(property) = child.value() {
-            if property.lines().count() > 1 {
-                return Err("Properties cannot share names.".to_string());
+    if let Some(properties_node) = annotation.get_child(&["dynamic_property"]) {
+        for (path, child) in properties_node.children() {
+            if let Some(property) = child.value() {
+                if property.lines().count() > 1 {
+                    return Err("Properties cannot share names.".to_string());
+                }
+                named_properties.push((path.clone(), property.clone()))
+            } else {
+                return Err("Property annotation can't be that nested.".to_string());
             }
-            named_properties.push((path.clone(), property.clone()))
-        } else {
-            return Err("Property annotation can't be that nested.".to_string());
         }
     }
 
@@ -135,19 +137,30 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
     named_properties.sort_by(|(a1, _), (b1, _)| a1.cmp(b1));
     let properties: Vec<String> = extract_properties(named_properties.clone());
 
-    println!("Evaluating assertions...");
+    println!("Parsing formulae and generating model representation...");
     // combine all assertions into one formula
     let single_assertion = combine_assertions(assertions.clone());
 
     // preproc all formulae at once - parse, compute max num of vars
     // it is crucial to include all formulae when computing number of HCTL vars needed
-    let mut all_formulae = properties;
+    let mut all_formulae = properties.clone();
     all_formulae.push(single_assertion);
     let (mut all_trees, num_hctl_vars) = parse_formulae_and_count_vars(&bn, all_formulae)?;
+    println!(
+        "Successfully parsed {} assertions and {} properties.",
+        assertions.len(),
+        properties.len(),
+    );
 
     // instantiate extended STG with enough variables to evaluate all formulae
     let graph = get_extended_symbolic_graph(&bn, num_hctl_vars as u16);
+    println!(
+        "Successfully generated model with {} vars and {} params.",
+        graph.symbolic_context().num_state_variables(),
+        graph.symbolic_context().num_parameter_variables(),
+    );
 
+    println!("Evaluating assertions...");
     // compute the colors (universally) satisfying the combined assertion formula
     let assertion_tree = all_trees.pop().unwrap();
     let result_assertions = model_check_trees(vec![assertion_tree], &graph)?;

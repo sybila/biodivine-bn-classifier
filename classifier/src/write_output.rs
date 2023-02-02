@@ -71,6 +71,8 @@ pub fn write_class_report_and_dump_bdds(
         .unwrap();
 
     let mut report_buffer = String::new();
+
+    // info regarding assertions
     report_buffer.push_str("### Assertion formulae\n\n");
     for assertion_formula in assertion_formulae {
         report_buffer.push_str(format!("# {}\n", assertion_formula).as_str());
@@ -83,9 +85,10 @@ pub fn write_class_report_and_dump_bdds(
         .as_str(),
     );
 
+    // info regarding properties
     report_buffer.push_str("### Property formulae individually\n\n");
     for (i, (name, property_formula)) in named_property_formulae.iter().enumerate() {
-        report_buffer.push_str(format!("#{name}  |  {property_formula}\n").as_str());
+        report_buffer.push_str(format!("# {name}  |  {property_formula}\n").as_str());
         report_buffer.push_str(
             format!(
                 "{} colors satisfy this property\n\n",
@@ -95,7 +98,8 @@ pub fn write_class_report_and_dump_bdds(
         );
     }
 
-    report_buffer.push_str("### Categories\n\n");
+    // info regarding the classification
+    report_buffer.push_str("### Classes\n\n");
     let mut i = 0;
     let i_max = i32::pow(2, property_results.len() as u32);
     while i < i_max {
