@@ -40,7 +40,7 @@ fn main() {
 
     // check if given input path is valid
     if !Path::new(input_path.as_str()).is_file() {
-        println!("{} is not valid file", input_path);
+        println!("{input_path} is not valid file");
         return;
     }
 
@@ -53,5 +53,8 @@ fn main() {
         )
     }
 
-    println!("Total computation time: {}ms", start.elapsed().unwrap().as_millis());
+    println!(
+        "Total computation time: {}ms",
+        start.elapsed().unwrap().as_millis()
+    );
 }

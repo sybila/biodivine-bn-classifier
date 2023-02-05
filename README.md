@@ -1,8 +1,26 @@
-# biodivine-hctl-explorer
+# BN-classifier
+
+The tool consists of two parts - the CLI classification engine and the GUI visualizer.
+
+## Classifier
+
+To compile the code, go to `classifier` directory and run
+
+`cargo build --release`
+
+To then invoke the tool, run the binary as
+```
+.\target\release\classifier <INPUT_PATH> [-o <OUTPUT_PATH>]
+```
+- `INPUT_PATH` is a path to a file in aeon format containing a PSBN model, and HCTL properties
+- `OUTPUT_PATH` is path where a resulting zip archive will be created
+
+
+## Visualizer
+
 Desktop app for visually exploring HCTL properties of Boolean networks.
 
-
-## Development guide
+### Development guide
 
 Install `tauri` CLI using `cargo install tauri-cli`.
 
@@ -17,5 +35,5 @@ cargo tauri dev -- -- classification_results model
 You can use the prepared example:
 
 ``
-cargo tauri dev -- -- '../benchmarks/mapk2/results.zip' '../benchmarks/mapk2/sketch.aeon'
+cargo tauri dev -- -- '../benchmarks/mapk/results.zip' '../benchmarks/mapk/model-with-properties.aeon'
 ``

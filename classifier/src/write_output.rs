@@ -67,7 +67,7 @@ pub fn write_class_report_and_dump_bdds(
         .start_file("metadata.txt", FileOptions::default())
         .unwrap();
     zip_writer
-        .write_all(format!("{}", num_hctl_vars).as_bytes())
+        .write_all(format!("{num_hctl_vars}").as_bytes())
         .unwrap();
 
     let mut report_buffer = String::new();
@@ -75,7 +75,7 @@ pub fn write_class_report_and_dump_bdds(
     // info regarding assertions
     report_buffer.push_str("### Assertion formulae\n\n");
     for assertion_formula in assertion_formulae {
-        report_buffer.push_str(format!("# {}\n", assertion_formula).as_str());
+        report_buffer.push_str(format!("# {assertion_formula}\n").as_str());
     }
     report_buffer.push_str(
         format!(
@@ -163,7 +163,7 @@ pub fn write_empty_report(assertion_formulae: &Vec<String>, archive_name: &str) 
     let mut report_buffer = String::new();
     report_buffer.push_str("### Assertion formulae\n\n");
     for assertion_formula in assertion_formulae {
-        report_buffer.push_str(format!("# {}\n", assertion_formula).as_str());
+        report_buffer.push_str(format!("# {assertion_formula}\n").as_str());
     }
     report_buffer.push_str("0 colors satisfy all assertions\n\n");
     zip_writer.write_all(report_buffer.as_bytes()).unwrap();

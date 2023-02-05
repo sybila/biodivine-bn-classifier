@@ -84,7 +84,7 @@ fn parse_formulae_and_count_vars(
 fn combine_assertions(formulae: Vec<String>) -> String {
     let mut conjunction = String::new();
     for formula in formulae {
-        conjunction.push_str(format!("({}) & ", formula).as_str());
+        conjunction.push_str(format!("({formula}) & ").as_str());
     }
 
     // If there are no assertions, resulting formula won't be empty and will be satisfied by
