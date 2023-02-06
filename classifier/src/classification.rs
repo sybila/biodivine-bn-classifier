@@ -1,6 +1,7 @@
 //! Components regarding the BN classification based on HCTL properties
 
 use crate::write_output::{write_class_report_and_dump_bdds, write_empty_report};
+use std::cmp::max;
 
 use biodivine_hctl_model_checker::model_checking::{
     collect_unique_hctl_vars, get_extended_symbolic_graph, model_check_trees,
@@ -17,101 +18,86 @@ use biodivine_lib_param_bn::symbolic_async_graph::{
 use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
 
 use std::collections::{HashMap, HashSet};
-use std::fs::read_to_string;
 
 type NamedFormulaeVec = Vec<(String, String)>;
 
-/// Get the HCTL formulae from annotations of aeon model.
-/// Assertion formulae are expected in a form:   #!dynamic_assertion: FORMULA
-/// Properties are expected in a form:           #!dynamic_property: NAME: FORMULA
+/// Read the list of assertions from an `.aeon` model annotation object.
 ///
-/// Return set of annotations (in order) and set of named properties (in random order).
-pub fn extract_formulae_from_aeon(
-    aeon_string: &str,
-) -> Result<(Vec<String>, NamedFormulaeVec), String> {
-    let annotation = ModelAnnotation::from_model_string(aeon_string);
-
-    let mut assertions: Vec<String> = Vec::new();
-    // assertions are expected as:     #!dynamic_assertion: FORMULA
-    if let Some(assertions_node) = annotation.get_child(&["dynamic_assertion"]) {
-        for value in assertions_node.value().unwrap().as_str().lines() {
-            assertions.push(value.to_string())
-        }
-    }
-
-    let mut named_properties: NamedFormulaeVec = Vec::new();
-    // properties are expected as:     #!dynamic_property: NAME: FORMULA
-    if let Some(properties_node) = annotation.get_child(&["dynamic_property"]) {
-        for (path, child) in properties_node.children() {
-            if let Some(property) = child.value() {
-                if property.lines().count() > 1 {
-                    return Err("Properties cannot share names.".to_string());
-                }
-                named_properties.push((path.clone(), property.clone()))
-            } else {
-                return Err("Property annotation can't be that nested.".to_string());
-            }
-        }
-    }
-
-    Ok((assertions, named_properties))
+/// The assertions are expected to appear as `#!dynamic_assertion: FORMULA` model annotations
+/// and they are returned in declaration order.
+fn read_model_assertions(annotations: &ModelAnnotation) -> Vec<String> {
+    let Some(list) = annotations.get_value(&["dynamic_assertion"]) else {
+        return Vec::new();
+    };
+    list.lines().map(|it| it.to_string()).collect()
 }
 
-/// Parse formulae into syntax trees, and count maximal number of HCTL variables in a formula
-fn parse_formulae_and_count_vars(
-    bn: &BooleanNetwork,
-    formulae: Vec<String>,
-) -> Result<(Vec<HctlTreeNode>, usize), String> {
-    let mut parsed_trees = Vec::new();
-    let mut max_num_hctl_vars = 0;
-    for formula in formulae {
-        let tokens = try_tokenize_formula(formula)?;
-        let tree = parse_hctl_formula(&tokens)?;
-
-        let modified_tree = check_props_and_rename_vars(*tree, HashMap::new(), String::new(), bn)?;
-        let num_hctl_vars = collect_unique_hctl_vars(modified_tree.clone(), HashSet::new()).len();
-
-        parsed_trees.push(modified_tree);
-        if num_hctl_vars > max_num_hctl_vars {
-            max_num_hctl_vars = num_hctl_vars;
+/// Read the list of named properties from an `.aeon` model annotation object.
+///
+/// The properties are expected to appear as `#!dynamic_property: NAME: FORMULA` model annotations.
+/// They are returned in alphabetic order w.r.t. the property name.
+fn read_model_properties(annotations: &ModelAnnotation) -> Result<NamedFormulaeVec, String> {
+    let Some(property_node) = annotations.get_child(&["dynamic_property"]) else {
+        return Ok(Vec::new());
+    };
+    let mut properties = Vec::with_capacity(property_node.children().len());
+    for (name, child) in property_node.children() {
+        if !child.children().is_empty() {
+            // TODO:
+            //  This might actually be a valid (if ugly) way for adding extra meta-data to
+            //  properties, but let's forbid it for now and we can enable it later if
+            //  there is an actual use for it.
+            return Err(format!("Property `{name}` contains nested values."));
         }
+        let Some(value) = child.value() else {
+            return Err(format!("Found empty dynamic property `{name}`."));
+        };
+        if value.lines().count() > 1 {
+            return Err(format!("Found multiple properties named `{name}`."));
+        }
+        properties.push((name.clone(), value.clone()));
     }
-    Ok((parsed_trees, max_num_hctl_vars))
+    // Sort alphabetically to avoid possible non-determinism down the line.
+    properties.sort_by(|(x, _), (y, _)| x.cmp(y));
+    Ok(properties)
 }
 
-/// Combine all assertions into one conjunction formula
-/// Empty strings are transformed into "true" literal
-fn combine_assertions(formulae: Vec<String>) -> String {
-    let mut conjunction = String::new();
-    for formula in formulae {
-        conjunction.push_str(format!("({formula}) & ").as_str());
+/// Read a HCTL formula string representation into an actual formula tree.
+fn parse_formula(bn: &BooleanNetwork, formula: &str) -> Result<HctlTreeNode, String> {
+    let tokens = try_tokenize_formula(formula.to_string())?;
+    let tree = parse_hctl_formula(&tokens)?;
+    let tree = check_props_and_rename_vars(*tree, HashMap::new(), String::new(), bn)?;
+    Ok(tree)
+}
+
+/// Combine all HCTL assertions in the given list into a single conjunction of assertions.
+fn build_combined_assertion(assertions: &[String]) -> String {
+    if assertions.is_empty() {
+        "true".to_string()
+    } else {
+        // Add parenthesis to each assertion.
+        let assertions: Vec<String> = assertions.iter().map(|it| format!("({it})")).collect();
+        // Join them into one big conjunction.
+        assertions.join(" & ")
     }
-
-    // If there are no assertions, resulting formula won't be empty and will be satisfied by
-    // all colors (moreover, it ensures that formula does not end with "&")
-    conjunction.push_str("true");
-
-    conjunction
 }
 
 /// Return the set of colors for which ALL system states are contained in the given color-vertex
 /// set (i.e., if the given relation is a result of model checking a property, get colors for which
 /// the property holds universally in every state).
+///
+/// Formally, this is a universal projection on the colors of the given `colored_vertices`.
 fn get_universal_colors(
     stg: &SymbolicAsyncGraph,
     colored_vertices: &GraphColoredVertices,
 ) -> GraphColors {
-    let complement = stg.mk_unit_colored_vertices().minus(colored_vertices);
+    let complement = stg.unit_colored_vertices().minus(colored_vertices);
     stg.unit_colors().minus(&complement.colors())
 }
 
 /// Extract properties from name-property pairs.
-pub fn extract_properties(named_props: NamedFormulaeVec) -> Vec<String> {
-    let mut properties = Vec::new();
-    for (_, prop) in named_props {
-        properties.push(prop.clone());
-    }
-    properties
+pub fn extract_properties(named_props: &NamedFormulaeVec) -> Vec<String> {
+    named_props.iter().map(|(_, x)| x.clone()).collect()
 }
 
 /// Perform the classification of Boolean networks based on given properties.
@@ -128,31 +114,36 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
     // TODO: allow caching between model-checking assertions and properties somehow
 
     // load the model and two sets of formulae (from model annotations)
-    let aeon_str = read_to_string(input_path).unwrap();
+    let Ok(aeon_str) = std::fs::read_to_string(input_path) else {
+        return Err(format!("Input file `{input_path}` is not accessible."));
+    };
     let bn = BooleanNetwork::try_from(aeon_str.as_str())?;
-    let (assertions, mut named_properties) = extract_formulae_from_aeon(aeon_str.as_str()).unwrap();
+    let annotations = ModelAnnotation::from_model_string(aeon_str.as_str());
+    let assertions = read_model_assertions(&annotations);
+    let named_properties = read_model_properties(&annotations)?;
     println!("Loaded all inputs.");
 
-    // sort the properties by their names, and extract them
-    named_properties.sort_by(|(a1, _), (b1, _)| a1.cmp(b1));
-    let properties: Vec<String> = extract_properties(named_properties.clone());
-
     println!("Parsing formulae and generating model representation...");
-    // combine all assertions into one formula
-    let single_assertion = combine_assertions(assertions.clone());
-
-    // preproc all formulae at once - parse, compute max num of vars
-    // it is crucial to include all formulae when computing number of HCTL vars needed
-    let mut all_formulae = properties.clone();
-    all_formulae.push(single_assertion);
-    let (mut all_trees, num_hctl_vars) = parse_formulae_and_count_vars(&bn, all_formulae)?;
+    // Combine all assertions into one formula and add it to the list of properties.
+    let assertion = build_combined_assertion(&assertions);
     println!(
         "Successfully parsed {} assertions and {} properties.",
         assertions.len(),
-        properties.len(),
+        named_properties.len(),
     );
 
-    // instantiate extended STG with enough variables to evaluate all formulae
+    // Parse all formulae and count the max. number of HCTL variables across formulae.
+    let assertion_tree = parse_formula(&bn, &assertion)?;
+    let mut num_hctl_vars = collect_unique_hctl_vars(assertion_tree.clone(), HashSet::new()).len();
+    let mut property_trees: Vec<HctlTreeNode> = Vec::new();
+    for (_name, formula) in &named_properties {
+        let tree = parse_formula(&bn, formula.as_str())?;
+        let tree_vars = collect_unique_hctl_vars(tree.clone(), HashSet::new()).len();
+        num_hctl_vars = max(num_hctl_vars, tree_vars);
+        property_trees.push(tree);
+    }
+
+    // Instantiate extended STG with enough variables to evaluate all formulae.
     let graph = get_extended_symbolic_graph(&bn, num_hctl_vars as u16);
     println!(
         "Successfully generated model with {} vars and {} params.",
@@ -161,16 +152,16 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
     );
 
     println!("Evaluating assertions...");
-    // compute the colors (universally) satisfying the combined assertion formula
-    let assertion_tree = all_trees.pop().unwrap();
-    let result_assertions = model_check_trees(vec![assertion_tree], &graph)?;
-    let valid_colors = get_universal_colors(&graph, result_assertions.get(0).unwrap());
+    // Compute the colors (universally) satisfying the combined assertion formula.
+    let assertion_result = model_check_trees(vec![assertion_tree], &graph)?;
+    assert_eq!(assertion_result.len(), 1);
+    let assertion_result = assertion_result.into_iter().next().unwrap();
+    let valid_colors = get_universal_colors(&graph, &assertion_result);
     println!("Assertions evaluated.");
 
     if valid_colors.is_empty() {
         println!("No color satisfies given assertions. Aborting.");
-        write_empty_report(&assertions, output_zip);
-        return Ok(());
+        return write_empty_report(&assertions, output_zip).map_err(|e| format!("{e:?}"));
     }
 
     // restrict the colors on the symbolic graph
@@ -181,11 +172,11 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
     )?;
 
     println!("Evaluating properties...");
-    // model check all properties on restricted graph
-    let results_properties = model_check_trees(all_trees, &graph)?;
-    let colors_properties: Vec<GraphColors> = results_properties
+    // Model check all properties on the restricted graph.
+    let property_result = model_check_trees(property_trees, &graph)?;
+    let property_colors: Vec<GraphColors> = property_result
         .iter()
-        .map(|colored_vertices| get_universal_colors(&graph, colored_vertices))
+        .map(|result| get_universal_colors(&graph, result))
         .collect();
 
     // do the classification while printing the report and dumping resulting BDDs
@@ -194,10 +185,11 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
         &assertions,
         valid_colors,
         &named_properties,
-        &colors_properties,
+        &property_colors,
         output_zip,
         num_hctl_vars,
-    );
+    )
+    .map_err(|e| format!("{e:?}"))?;
     println!("Output finished.");
 
     Ok(())
@@ -206,10 +198,13 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use crate::classification::{
-        combine_assertions, extract_formulae_from_aeon, extract_properties,
-        parse_formulae_and_count_vars,
+        build_combined_assertion, extract_properties, parse_formula, read_model_assertions,
+        read_model_properties,
     };
-    use biodivine_lib_param_bn::BooleanNetwork;
+    use biodivine_hctl_model_checker::model_checking::collect_unique_hctl_vars;
+    use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
+    use std::cmp::max;
+    use std::collections::HashSet;
 
     #[test]
     /// Test the formulae parsing and variable counting
@@ -226,7 +221,12 @@ mod tests {
             "!{y}: (AG EF {y} & (!{z}: AX {z}))".to_string(),
         ];
 
-        let (_, var_count) = parse_formulae_and_count_vars(&bn, formulae).unwrap();
+        let mut var_count = 0;
+        for f in formulae {
+            let tree = parse_formula(&bn, f.as_str()).unwrap();
+            let c = collect_unique_hctl_vars(tree, HashSet::new()).len();
+            var_count = max(c, var_count);
+        }
         assert_eq!(var_count, 2);
     }
 
@@ -238,16 +238,16 @@ mod tests {
         let formula3 = "a & b".to_string();
 
         // empty vector should result in true constant
-        assert_eq!(combine_assertions(Vec::new()), "true".to_string());
+        assert_eq!(build_combined_assertion(&[]), "true".to_string());
 
         // otherwise, result should be a conjunction ending with `& true`
         assert_eq!(
-            combine_assertions(vec![formula1.clone(), formula2.clone()]),
-            "(3{x}: @{x}: AX {x}) & (false) & true".to_string(),
+            build_combined_assertion(&[formula1.clone(), formula2.clone()]),
+            "(3{x}: @{x}: AX {x}) & (false)".to_string(),
         );
         assert_eq!(
-            combine_assertions(vec![formula1, formula2, formula3]),
-            "(3{x}: @{x}: AX {x}) & (false) & (a & b) & true".to_string(),
+            build_combined_assertion(&[formula1, formula2, formula3]),
+            "(3{x}: @{x}: AX {x}) & (false) & (a & b)".to_string(),
         )
     }
 
@@ -265,7 +265,9 @@ mod tests {
             v_3 -> v_3
         ";
 
-        let (assertions, named_properties) = extract_formulae_from_aeon(aeon_str).unwrap();
+        let annotations = ModelAnnotation::from_model_string(aeon_str);
+        let assertions = read_model_assertions(&annotations);
+        let named_properties = read_model_properties(&annotations).unwrap();
 
         assert_eq!(
             assertions,
@@ -289,10 +291,12 @@ mod tests {
             $v_3:v_3
             v_3 -> v_3
         ";
-        assert!(extract_formulae_from_aeon(aeon_str).is_err());
+        let annotations = ModelAnnotation::from_model_string(aeon_str);
+        let props = read_model_properties(&annotations);
+        assert!(props.is_err());
         assert_eq!(
-            extract_formulae_from_aeon(aeon_str).err().unwrap(),
-            "Properties cannot share names.".to_string()
+            props.err().unwrap().as_str(),
+            "Found multiple properties named `p1`."
         );
     }
 
@@ -304,7 +308,7 @@ mod tests {
             ("p2".to_string(), "false".to_string()),
         ];
         assert_eq!(
-            extract_properties(named_props),
+            extract_properties(&named_props),
             vec!["true".to_string(), "false".to_string()]
         );
     }

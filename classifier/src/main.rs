@@ -1,7 +1,7 @@
 //! Tool for symbolic classification of BN models based on dynamic properties.
 //!
-//! Takes a path to a model in aeon format containing a partially defined BN model and
-//! two sets of HCTL formulae - assertions that must be satisfied, and properties that are
+//! Takes a path to a model in `.aeon` format containing a partially defined BN model and
+//! two sets of HCTL formulae: assertions that must be satisfied, and properties that are
 //! used for classification. All formulae are given in a form of model annotations.
 //!
 //! First, conjunction of assertions is model-checked, and then the set of remaining colors is

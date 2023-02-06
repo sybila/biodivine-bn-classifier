@@ -6,7 +6,7 @@ use biodivine_lib_param_bn::symbolic_async_graph::GraphColors;
 use biodivine_lib_param_bn::BooleanNetwork;
 
 use clap::Parser;
-use std::fs::{read_to_string, File};
+use std::fs::File;
 use std::io::Read;
 use zip::ZipArchive;
 
@@ -19,6 +19,14 @@ struct Arguments {
 
     /// Path to an existing zip archive with report and files with BDDs.
     results_archive: String,
+}
+
+/// Read the contents of a file from a zip archive into a string.
+fn read_zip_file(reader: &mut ZipArchive<File>, file_name: &str) -> String {
+    let mut contents = String::new();
+    let mut file = reader.by_name(file_name).unwrap();
+    file.read_to_string(&mut contents).unwrap();
+    contents
 }
 
 /// Collect the results of classification, which are BDDs representing color sets.
@@ -37,37 +45,32 @@ pub fn load_classifier_output(
     let archive_file = File::open(results_archive).unwrap();
     let mut archive = ZipArchive::new(archive_file).unwrap();
 
-    // load number of HCTL variables from computation metadata
-    let mut metadata_file = archive.by_name("metadata.txt").unwrap();
-    let mut buffer = String::new();
-    metadata_file.read_to_string(&mut buffer).unwrap();
-    let num_hctl_vars: u16 = buffer.parse::<u16>().unwrap();
-    drop(metadata_file);
+    // Load the number of HCTL variables from computation metadata.
+    let metadata = read_zip_file(&mut archive, "metadata.txt");
+    let num_hctl_vars: u16 = metadata.trim().parse().unwrap();
 
-    // load the BN model and generate extended symbolic graph
-    let model_string = read_to_string(model_path).unwrap();
-    let bn = BooleanNetwork::try_from(model_string.as_str()).unwrap();
+    // Load the BN model and generate extended symbolic graph.
+    let bn = BooleanNetwork::try_from_file(model_path).unwrap();
     let graph = get_extended_symbolic_graph(&bn, num_hctl_vars);
 
     // collect the colored sets from the BDD dumps together with their "names"
     let mut named_color_sets = Vec::new();
 
-    // iterate over all files by indices
-    // expects only BDD dumps (individual files) and a report&metadata in the archive (for now)
-    for idx in 0..archive.len() {
-        let mut entry = archive.by_index(idx).unwrap();
-        let file_name = entry.name().to_string();
-        if file_name == *"report.txt" || file_name == *"metadata.txt" {
+    let files = archive.file_names()
+        .map(|it| it.to_string())
+        .collect::<Vec<_>>();
+
+    for file in files {
+        if !file.starts_with("bdd_dump_") {
+            // Only read BDD dumps.
             continue;
         }
 
-        // read the raw BDD
-        let mut bdd_str = String::new();
-        entry.read_to_string(&mut bdd_str).unwrap();
-        let bdd = Bdd::from_string(bdd_str.as_str());
+        let bdd_string = read_zip_file(&mut archive, file.as_str());
+        let bdd = Bdd::from_string(bdd_string.as_str());
 
         let color_set = GraphColors::new(bdd, graph.symbolic_context());
-        named_color_sets.push((file_name, color_set));
+        named_color_sets.push((file, color_set));
     }
 
     named_color_sets
@@ -82,6 +85,6 @@ fn main() {
         load_classifier_output(args.results_archive.as_str(), args.model_path.as_str());
 
     for (name, color_set) in color_sets {
-        println!("{}: {}", name, color_set.exact_cardinality());
+        println!("{}: {:.0}", name, color_set.approx_cardinality());
     }
 }
