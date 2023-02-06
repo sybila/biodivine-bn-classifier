@@ -4,6 +4,16 @@ on:
   pull_request:
 
 jobs:
+  test-classifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: compile and test the classifier
+        run: |
+          (cd classifier && cargo check)
+          (cd classifier && cargo test)
   test-tauri:
     strategy:
       fail-fast: false
