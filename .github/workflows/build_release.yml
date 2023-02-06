@@ -11,13 +11,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
+          - platform: ubuntu-20.04
             artifact_name: bn-classifier
             asset_name: bn-classifier-linux-amd64
-          - os: windows-latest
+          - platform: windows-latest
             artifact_name: bn-classifier.exe
             asset_name: bn-classifier-windows-amd64
-          - os: macos-latest
+          - platform: macos-latest
             artifact_name: bn-classifier
             asset_name: bn-classifier-macos-amd64
 
