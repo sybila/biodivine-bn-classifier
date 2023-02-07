@@ -7,27 +7,41 @@ license = "MIT"
 repository = "https://github.com/sybila/biodivine-hctl-explorer"
 default-run = "hctl-property-explorer"
 edition = "2021"
-rust-version = "1.59"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+rust-version = "1.60"
 
 [build-dependencies]
 tauri-build = { version = "1.2.1", features = [] }
 
 [dependencies]
-# Older versions are used because aeon server needs them. Once that dependency is gone, we can update.
-biodivine-lib-param-bn = "0.3.0"
-biodivine-lib-bdd = "0.4.0"
-biodivine-aeon-server = { git = "https://github.com/sybila/biodivine-aeon-server" }
+biodivine-lib-bdd = ">=0.4.2, <1.0.0"
+biodivine-lib-param-bn = ">=0.4.3, <1.0.0"
+biodivine-hctl-model-checker = ">=0.1.1, <1.0.0"
+rand = "0.8.5"
+clap = { version = "4.1.4", features = ["derive"] }
 json = "0.12.4"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.2.2", features = ["dialog-all"] }
+zip = "0.6.3"
+
+# Include Z3 dependencies as strictly as possible, we don't want
+# this to change because it might break our release builds.
+#z3="^0.11.2"
+#z3-sys = "^0.7.1"
 
 [features]
+
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
 default = [ "custom-protocol" ]
+
 # this feature is used for production builds where `devPath` points to the filesystem
 # DO NOT remove this
 custom-protocol = [ "tauri/custom-protocol" ]
+
+# For releases, we want to include Z3 statically, so that users
+# don't have to install it (or break compatibility with new versions).
+# So for CI builds, this feature is enabled, but for local builds,
+# you don't need it as long as you have Z3 installed (because your
+# build may take >30min if you enable it).
+#static-z3 = ["z3/static-link-z3"]

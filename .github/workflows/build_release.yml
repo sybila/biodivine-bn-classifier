@@ -1,10 +1,43 @@
 name: 'binaries'
+
 on:
   push:
-    branches:
-      - release
+    tags:
+      - '*'
 
 jobs:
+  build-classifier:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-20.04
+            artifact_name: bn-classifier
+            asset_name: bn-classifier-linux-amd64
+          - platform: windows-latest
+            artifact_name: bn-classifier.exe
+            asset_name: bn-classifier-windows-amd64
+          - platform: macos-latest
+            artifact_name: bn-classifier
+            asset_name: bn-classifier-macos-amd64
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: compile classifier binary
+        run: |
+          (cd classifier && cargo build --release)
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: classifier/target/release/${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
+
+
   build-tauri:
     strategy:
       fail-fast: false
@@ -29,8 +62,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
-          releaseName: 'App v__VERSION__'
+          tagName: ${{ github.ref }}
+          releaseName: 'App v__VERSION__'  # the action automatically replaces \_\_VERSION\_\_ with the app version
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: true
           prerelease: false
