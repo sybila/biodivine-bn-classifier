@@ -28,7 +28,8 @@ not the case, please substitute them for the full path to the downloaded binary.
 The input for the analysis is an [AEON model](https://biodivine.fi.muni.cz/aeon) annotated with HCTL formulas.
 The details of the HCTL syntax can be found [here](https://github.com/sybila/biodivine-hctl-model-checker).
 To get familar with AEON models, we recommend [this page](https://biodivine.fi.muni.cz/aeon/manual/v0.4.0/model_editor/import_export.html) 
-of the AEON manual.
+of the AEON manual. A wide range of real-world models for testing can be also found 
+[here](https://github.com/sybila/biodivine-boolean-models) (however, these models do not contain any HCTL formulas).
 
 Each HCTL formula represents either an *assertion*, or a *named property*. The assertions restrict the space of
 possible network parametrisations: the tool will disregard any parametrisation that does not satisfy all
@@ -44,24 +45,24 @@ hybrid assertions and properties in complex models in the `benchmarks` directory
 
 ```
 # This property states that every state must be able to reach a state where
-# variable `Apoptosis` is true. The #` and `# serve as opening/closing escape
-# characters for the HCTL formula.
-# dynamic_assertion: #`EF Apoptosis`#
+# variable `Apoptosis` is true. `#!` is used to start a "comment annotation"
+# The #` and `# serve as opening/closing escape characters for the HCTL formula.
+#! dynamic_assertion: #`EF Apoptosis`#
 
 # This property states that there must be a state in which `Apoptosis`
 # holds, and this state is a fixed-point.
-# dynamic_assertion: #`3{x}: @{x}: (Apoptosis & AX x)`#
+#! dynamic_assertion: #`3{x}: @{x}: (Apoptosis & AX x)`#
 
 # Consequently, the classification step will only consider parametrisations
 # that satisfy the two assertions. To further disambiguate between 
 # parametrisations, we can define named properties:
 
 # Property `will_die` states that the system will always eventually reach `Apoptosis`.
-# dynamic_property: will_die: #`AF AG Apoptosis`#
+#! dynamic_property: will_die: #`AF AG Apoptosis`#
 
 # Property `cannot_be_undead` states that whenever `Apoptosis` is true, it must
 # stay true forver.
-# dynamic_property: cannot_be_undead: #`Apoptosis => AG Apoptosis`#
+#! dynamic_property: cannot_be_undead: #`Apoptosis => AG Apoptosis`#
 ```
 
 #### Running classification
@@ -70,12 +71,12 @@ Once you have a `annotated-model.aeon` file, you can run the classification engi
 
 `bn-classifier path/to/annotated-model.aeon path/to/output_archive.zip`
 
-The output is written into the `output_archive.zip`, which contains both a plaintext
+The output is written into the `output_archive.zip` which contains both a plaintext
 `report.txt`, where you can see a summary of the results, as well as raw BDD dumps
 (compatible with the [lib-bdd](https://github.com/sybila/biodivine-lib-bdd) string 
 representation) that can be imported into the `hctl-explorer`.
 
-#### Running visualisations
+#### Running visualisation
 
 Once you obtain the classification results, you can run the visualisation tool
 using the `hctl-explorer` command. Note that both the annotated model and the 
@@ -85,7 +86,7 @@ result archive are needed as inputs for the visualisation tool.
 
 This command should open a window with an interactive decision tree editor.
 In this editor, you can branch the set of results by conditioning on various
-model parameters. Once only one possible outcome (combination of valid properties)
+model parameters. Once only a single outcome (combination of valid properties)
 is admissible, the part of the tree will be shown as a leaf. You can either
 choose the branching conditions manually, or let the tool infer a suitable
 tree based on information entropy of the dataset.
@@ -121,7 +122,7 @@ into the `target/release` directory.
 Alternatively, to run the classifier directly, you can use (still in the `classifier` directory):
 
 ```
-    cargo run --release --bin bn-classifier -- path/to/annotated-model.aeon path/to/output.zip
+cargo run --release --bin bn-classifier -- path/to/annotated-model.aeon path/to/output.zip
 ```
 
 #### Compiling `hctl-explorer`
@@ -134,11 +135,11 @@ depends on your OS).
 To run the application directly, you can use (still in the repository root):
 
 ```
-    cargo tauri dev -- -- path/to/classification-results.zip path/to/annotated-model.aeon
+cargo tauri dev -- -- path/to/classification-results.zip path/to/annotated-model.aeon
 ```
 
 However, note that the application will execute from the `src-tauri` folder, so the arguments
 need to be either absolute paths, or paths relative to the `src-tauri` folder. Furthermore,
-the app is compiled without optimizations, so the interface can be slow for even 
-moderately-sized models. However, this mode should allow you to use standard 
-JavaScript developer console to debug the UI.
+in this mode, the app is compiled without optimizations, so the interface can be slow for even 
+moderately-sized models. This mode should allow you to use standard 
+JavaScript developer console to debug/inspect the UI.
