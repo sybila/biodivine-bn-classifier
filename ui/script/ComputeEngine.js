@@ -29,33 +29,12 @@ let ComputeEngine = {
 		// Native compute engine is always connected.
 		return true;
 	},
-	
-	// Force requests connection even when ping was not established (for situations
-	// where this is the first call).
-	getWitness(witness, callback, force = false) {		
-		if (!force && !this.isConnected()) {
-			callback("Compute engine not connected.");
-			return undefined;
-		} else {
-			return this._backendRequest("/get_witness/"+witness, (e, r) => {
-				if (callback !== undefined) {
-					callback(e, r);
-				}
-			}, "GET");
-		}
-	},
 
-	getTreeWitness(nodeId, callback, force = false) {
-		if (!force && !this.isConnected()) {
-			callback("Compute engine not connected.");
-			return undefined;
-		} else {
-			return this._backendRequest("/get_tree_witness/"+nodeId, (e, r) => {
-				if (callback !== undefined) {
-					callback(e, r);
-				}
-			}, "GET");	
-		}
+	getTreeWitness(nodeId, randomize = false, callback) {
+		// The response is forwarded "as is", because it is an AEON file.
+		invoke('get_witness', { "nodeId": parseInt(nodeId), "randomize": randomize })
+			.then((response) => callback(undefined, response))
+			.catch((error) => callback(error, undefined));
 	},
 
 	getBifurcationTree(callback, force = false) {

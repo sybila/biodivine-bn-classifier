@@ -372,36 +372,45 @@ function openTreeWitness() {
 	if (node === undefined) {
 		return;
 	}
-	const url = window.location.pathname.replace("tree_explorer.html", "index.html");
-    window.open(url + '?engine=' + encodeURI(ComputeEngine.getAddress()) + "&tree_witness="+ encodeURI(node));
+	ComputeEngine.getTreeWitness(node, false, (e, model) => {
+		if (model === undefined) {
+			alert(e);
+		} else {
+			let data = CytoscapeEditor.getSelectedNodeTreeData();
+			_downloadFile(data.class+"_first_witness.aeon", model);
+		}
+	})
 }
 
-function openStabilityWitness(variable, behaviour, vector) {
+/* Open a random witness network for the currently selected tree node. */
+function openRandomTreeWitness() {
 	let node = CytoscapeEditor.getSelectedNodeId();
 	if (node === undefined) {
 		return;
 	}
-	const url = window.location.pathname.replace("tree_explorer.html", "index.html");
-    window.open(url + '?engine=' + encodeURI(ComputeEngine.getAddress()) + "&tree_witness="+ encodeURI(node) + "&variable=" + encodeURI(variable) + "&behaviour=" + encodeURI(behaviour) + "&vector=" + encodeURI(vector));
+	ComputeEngine.getTreeWitness(node, true, (e, model) => {
+		if (model === undefined) {
+			alert(e);
+		} else {
+			let data = CytoscapeEditor.getSelectedNodeTreeData();
+			_downloadFile(data.class+"_random_witness.aeon", model);
+		}
+	})
 }
 
-/* Open attractors for the currently selected tree node. */
-function openTreeAttractor() {
-	let node = CytoscapeEditor.getSelectedNodeId();
-	if (node === undefined) {
-		return;
-	}
-	const url = window.location.pathname.replace("tree_explorer.html", "explorer.html");
-    window.open(url + '?engine=' + encodeURI(ComputeEngine.getAddress()) + "&tree_witness="+ encodeURI(node));
-}
 
-function openStabilityAttractor(variable, behaviour, vector) {
-	let node = CytoscapeEditor.getSelectedNodeId();
-	if (node === undefined) {
-		return;
-	}
-	const url = window.location.pathname.replace("tree_explorer.html", "explorer.html");
-    window.open(url + '?engine=' + encodeURI(ComputeEngine.getAddress()) + "&tree_witness="+ encodeURI(node) + "&variable=" + encodeURI(variable) + "&behaviour=" + encodeURI(behaviour) + "&vector=" + encodeURI(vector));
+function _downloadFile(name, content) {
+	window.__TAURI__.dialog.save({
+		defaultPath: name,
+		filters: [{
+			name: 'AEON',
+			extensions: ['aeon']
+		}]
+	}).then((path => {
+		if (path) {
+			window.__TAURI__.invoke('save_file', { "path": path, "content": content });
+		}
+	}));	
 }
 
 function vector_to_string(vector) {
@@ -423,38 +432,6 @@ function vector_to_string(vector) {
 	}
 	result += "]";
 	return result;
-}
-
-// Used to initialize a stability analysis button in the detail panels.
-function initStabilityButton(id, button, dropdown, container) {
-    let loading = document.getElementById("loading-indicator");
-    button.onclick = function() {
-        loading.classList.remove("invisible");
-        let behaviour = dropdown.value;
-        ComputeEngine.getStabilityData(id, behaviour, (e, r) => {
-            loading.classList.add("invisible");
-            if (e !== undefined) {
-                console.log(e);
-                alert("Cannot load stability data: "+e);                   
-            } else {
-            	console.log(r);
-            	let content = "<h4>Stability analysis:</h4>";
-            	for (item of r) {
-            		let variableName = item.variable;
-            		if (item.data.length == 1) {            			
-            			content += "<div><b>" + variableName + "</b>: always "+vector_to_string(item.data[0].vector)+"</div>";            			
-            		} else {            			
-            			content += "<div><b>" + variableName + "</b>:</br>";
-            			for (data of item.data) {
-            				content += " - " + vector_to_string(data.vector) + ": " + data.colors + getWitnessPanelForVariable(variableName, behaviour, data.vector) + "</br>";
-            			}
-            			content += "</div>"
-            		}            		
-            	}               
-                container.innerHTML = content;
-            }
-        })
-    }
 }
 
 function getWitnessPanelForVariable(variable, behaviour, vector) {
