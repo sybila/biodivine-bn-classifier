@@ -56,7 +56,8 @@ pub fn load_classifier_output(
     // collect the colored sets from the BDD dumps together with their "names"
     let mut named_color_sets = Vec::new();
 
-    let files = archive.file_names()
+    let files = archive
+        .file_names()
         .map(|it| it.to_string())
         .collect::<Vec<_>>();
 

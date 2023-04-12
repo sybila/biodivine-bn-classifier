@@ -4,12 +4,10 @@ use crate::write_output::{write_class_report_and_dump_bdds, write_empty_report};
 use std::cmp::max;
 
 use biodivine_hctl_model_checker::model_checking::{
-    collect_unique_hctl_vars, get_extended_symbolic_graph, model_check_trees,
+    collect_unique_hctl_vars, get_extended_symbolic_graph, model_check_tree, model_check_trees,
 };
 use biodivine_hctl_model_checker::preprocessing::node::HctlTreeNode;
-use biodivine_hctl_model_checker::preprocessing::parser::parse_hctl_formula;
-use biodivine_hctl_model_checker::preprocessing::tokenizer::try_tokenize_formula;
-use biodivine_hctl_model_checker::preprocessing::utils::check_props_and_rename_vars;
+use biodivine_hctl_model_checker::preprocessing::parser::parse_and_minimize_hctl_formula;
 
 use biodivine_lib_param_bn::biodivine_std::traits::Set;
 use biodivine_lib_param_bn::symbolic_async_graph::{
@@ -17,7 +15,7 @@ use biodivine_lib_param_bn::symbolic_async_graph::{
 };
 use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 type NamedFormulaeVec = Vec<(String, String)>;
 
@@ -60,14 +58,6 @@ fn read_model_properties(annotations: &ModelAnnotation) -> Result<NamedFormulaeV
     // Sort alphabetically to avoid possible non-determinism down the line.
     properties.sort_by(|(x, _), (y, _)| x.cmp(y));
     Ok(properties)
-}
-
-/// Read a HCTL formula string representation into an actual formula tree.
-fn parse_formula(bn: &BooleanNetwork, formula: &str) -> Result<HctlTreeNode, String> {
-    let tokens = try_tokenize_formula(formula.to_string())?;
-    let tree = parse_hctl_formula(&tokens)?;
-    let tree = check_props_and_rename_vars(*tree, HashMap::new(), String::new(), bn)?;
-    Ok(tree)
 }
 
 /// Combine all HCTL assertions in the given list into a single conjunction of assertions.
@@ -133,11 +123,11 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
     );
 
     // Parse all formulae and count the max. number of HCTL variables across formulae.
-    let assertion_tree = parse_formula(&bn, &assertion)?;
+    let assertion_tree = parse_and_minimize_hctl_formula(&bn, &assertion)?;
     let mut num_hctl_vars = collect_unique_hctl_vars(assertion_tree.clone(), HashSet::new()).len();
     let mut property_trees: Vec<HctlTreeNode> = Vec::new();
     for (_name, formula) in &named_properties {
-        let tree = parse_formula(&bn, formula.as_str())?;
+        let tree = parse_and_minimize_hctl_formula(&bn, formula.as_str())?;
         let tree_vars = collect_unique_hctl_vars(tree.clone(), HashSet::new()).len();
         num_hctl_vars = max(num_hctl_vars, tree_vars);
         property_trees.push(tree);
@@ -153,9 +143,7 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
 
     println!("Evaluating assertions...");
     // Compute the colors (universally) satisfying the combined assertion formula.
-    let assertion_result = model_check_trees(vec![assertion_tree], &graph)?;
-    assert_eq!(assertion_result.len(), 1);
-    let assertion_result = assertion_result.into_iter().next().unwrap();
+    let assertion_result = model_check_tree(assertion_tree, &graph)?;
     let valid_colors = get_universal_colors(&graph, &assertion_result);
     println!("Assertions evaluated.");
 
@@ -198,10 +186,10 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use crate::classification::{
-        build_combined_assertion, extract_properties, parse_formula, read_model_assertions,
-        read_model_properties,
+        build_combined_assertion, extract_properties, read_model_assertions, read_model_properties,
     };
     use biodivine_hctl_model_checker::model_checking::collect_unique_hctl_vars;
+    use biodivine_hctl_model_checker::preprocessing::parser::parse_and_minimize_hctl_formula;
     use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
     use std::cmp::max;
     use std::collections::HashSet;
@@ -223,7 +211,7 @@ mod tests {
 
         let mut var_count = 0;
         for f in formulae {
-            let tree = parse_formula(&bn, f.as_str()).unwrap();
+            let tree = parse_and_minimize_hctl_formula(&bn, f.as_str()).unwrap();
             let c = collect_unique_hctl_vars(tree, HashSet::new()).len();
             var_count = max(c, var_count);
         }
