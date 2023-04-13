@@ -19,10 +19,13 @@ use rand::prelude::StdRng;
 use rand::SeedableRng;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::ops::DerefMut;
+use std::path::Path;
 use std::sync::Mutex;
+use biodivine_lib_param_bn::biodivine_std::traits::Set;
 use tauri::State;
+use zip::write::{FileOptions, ZipWriter};
 use zip::ZipArchive;
 
 pub mod bdt;
@@ -60,6 +63,59 @@ async fn save_file(path: &str, content: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn save_zip_archive(path: &str, list_file_contents: Vec<&str>) -> Result<(), String> {
+    // Prepare the archive first
+    let archive_path = Path::new(path);
+    // If there are some non existing dirs in path, create them.
+    let prefix = archive_path.parent().unwrap();
+    std::fs::create_dir_all(prefix).map_err(|e| format!("{e:?}"))?;
+    // Create a zip writer for the desired archive.
+    let archive = File::create(archive_path).map_err(|e| format!("{e:?}"))?;
+    let mut zip_writer = ZipWriter::new(archive);
+
+    for (i, file_content) in list_file_contents.iter().enumerate() {
+        zip_writer
+            .start_file(format!("witness_{i}.aeon"), FileOptions::default())
+            .map_err(|e| format!("{e:?}"))?;
+        writeln!(zip_writer, "{file_content}").map_err(|e| format!("{e:?}"))?;
+    }
+
+    zip_writer.finish().map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+
+/// Randomly select a color from the given set of colors.
+/// This is a workaround that should be modified in future.
+pub fn pick_random_color(
+    rng: &mut StdRng,
+    graph: &SymbolicAsyncGraph,
+    color_set: &GraphColors,
+) -> GraphColors {
+    let random_witness = color_set.as_bdd().random_valuation(rng).unwrap();
+
+    let bdd_vars = graph.symbolic_context().bdd_variable_set();
+    let mut partial_valuation = BddPartialValuation::empty();
+    for var in bdd_vars.variables() {
+        if !graph
+            .symbolic_context()
+            .parameter_variables()
+            .contains(&var)
+        {
+            // Only "copy" the values of parameter variables. The rest should be irrelevant.
+            continue;
+        }
+        partial_valuation.set_value(var, random_witness.value(var));
+    }
+    let singleton_bdd = bdd_vars.mk_conjunctive_clause(&partial_valuation);
+    // We can directly build a `GraphColors` object because we only copied the parameter
+    // variables from the random valuation (although the `pick_witness` method shouldn't
+    // really care about extra variables in the BDD at all).
+    let singleton_set = graph.unit_colors().copy(singleton_bdd);
+    singleton_set
+}
+
+/// Wrapper to only get a single witness
+#[tauri::command]
 async fn get_witness(
     tree: State<'_, Mutex<Bdt>>,
     graph: State<'_, Mutex<SymbolicAsyncGraph>>,
@@ -67,46 +123,57 @@ async fn get_witness(
     node_id: usize,
     randomize: bool,
 ) -> Result<String, String> {
+    let singleton_witness = get_witnesses(tree, graph, random_state, 1, node_id, randomize).await?;
+    assert_eq!(singleton_witness.len(), 1);
+    Ok(singleton_witness[0].clone())
+}
+
+#[tauri::command]
+async fn get_witnesses(
+    tree: State<'_, Mutex<Bdt>>,
+    graph: State<'_, Mutex<SymbolicAsyncGraph>>,
+    random_state: State<'_, Mutex<StdRng>>,
+    num_witnesses: i32,
+    node_id: usize,
+    randomize: bool,
+) -> Result<Vec<String>, String> {
     let tree = tree.lock().unwrap();
     let graph = graph.lock().unwrap();
     let Some(node_id) = BdtNodeId::try_from(node_id, &tree) else {
         return Err(format!("Invalid node id {node_id}."));
     };
 
-    let node_colors = tree.all_node_params(node_id);
-    let witness = if !randomize {
-        // The `SymbolicAsyncGraph::pick_witness` should be deterministic.
-        graph.pick_witness(&node_colors)
-    } else {
-        // For random networks, we need to be a bit more creative... (although, support for
-        // this in lib-param-bn would be nice).
-        let mut generator = random_state.lock().unwrap();
-        let std_rng: &mut StdRng = generator.deref_mut();
-        let random_witness = node_colors.as_bdd().random_valuation(std_rng).unwrap();
+    let mut node_colors = tree.all_node_params(node_id);
+    let mut witnesses_bns: Vec<BooleanNetwork> = Vec::new();
+    let mut i = 0;
 
-        let bdd_vars = graph.symbolic_context().bdd_variable_set();
-        let mut partial_valuation = BddPartialValuation::empty();
-        for var in bdd_vars.variables() {
-            if !graph
-                .symbolic_context()
-                .parameter_variables()
-                .contains(&var)
-            {
-                // Only "copy" the values of parameter variables. The rest should be irrelevant.
-                continue;
-            }
-            partial_valuation.set_value(var, random_witness.value(var));
-        }
-        let singleton_bdd = bdd_vars.mk_conjunctive_clause(&partial_valuation);
-        // We can directly build a `GraphColors` object because we only copied the parameter
-        // variables from the random valuation (although the `pick_witness` method shouldn't
-        // really care about extra variables in the BDD at all).
-        let singleton_set = graph.unit_colors().copy(singleton_bdd);
-        graph.pick_witness(&singleton_set)
-    };
+    // collect `num_witnesses` networks
+    while i < num_witnesses && !node_colors.is_empty() {
+        // get singleton color for the witness
+        let witness_color = if !randomize {
+            // The `SymbolicAsyncGraph::pick_singleton` should be deterministic.
+            node_colors.pick_singleton()
+        } else {
+            // For random networks, we need to be a bit more creative... (although, support for
+            // this in lib-param-bn would be nice).
+            let mut generator = random_state.lock().unwrap();
+            let std_rng: &mut StdRng = generator.deref_mut();
+            pick_random_color(std_rng, &graph, &node_colors)
+        };
+        assert_eq!(witness_color.approx_cardinality(), 1.0);
+        witnesses_bns.push(graph.pick_witness(&witness_color));
 
-    Ok(witness.to_string())
+        // remove the color from the set
+        node_colors = node_colors.minus(&witness_color);
+        i += 1;
+    }
+
+    // TODO: a message if there is less actual witnesses than required
+
+    let witnesses_str = witnesses_bns.into_iter().map(|x| x.to_string()).collect();
+    Ok(witnesses_str)
 }
+
 
 #[tauri::command]
 async fn auto_expand_tree(
@@ -304,7 +371,9 @@ fn main() {
             apply_decision_attribute,
             revert_decision,
             get_witness,
-            save_file
+            get_witnesses,
+            save_file,
+            save_zip_archive,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

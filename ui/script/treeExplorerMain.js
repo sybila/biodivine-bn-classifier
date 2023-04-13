@@ -377,7 +377,7 @@ function openTreeWitness() {
 			alert(e);
 		} else {
 			let data = CytoscapeEditor.getSelectedNodeTreeData();
-			_downloadFile(data.class+"_first_witness.aeon", model);
+			_downloadFile(data.class + "_first_witness.aeon", model);
 		}
 	})
 }
@@ -398,6 +398,45 @@ function openRandomTreeWitness() {
 	})
 }
 
+/* Open several witness networks for the currently selected tree node. */
+function openSeveralTreeWitnesses() {
+	let node = CytoscapeEditor.getSelectedNodeId();
+	if (node === undefined) {
+		return;
+	}
+
+	// TODO - select number automatically
+	let num_witnesses = 5;
+
+	ComputeEngine.getTreeWitnesses(num_witnesses, node, false, (e, model_list) => {
+		if (model_list === undefined) {
+			alert(e);
+		} else {
+			let data = CytoscapeEditor.getSelectedNodeTreeData();
+			_downloadZipArchive(data.class+"_first_"+model_list.length+"_witnesses.zip", model_list);
+		}
+	})
+}
+
+/* Open several random witness network for the currently selected tree node. */
+function openSeveralRandomTreeWitnesses() {
+	let node = CytoscapeEditor.getSelectedNodeId();
+	if (node === undefined) {
+		return;
+	}
+
+	// TODO - select number automatically
+	let num_witnesses = 5;
+
+	ComputeEngine.getTreeWitnesses(num_witnesses, node, true, (e, model_list) => {
+		if (model_list === undefined) {
+			alert(e);
+		} else {
+			let data = CytoscapeEditor.getSelectedNodeTreeData();
+			_downloadZipArchive(data.class+"_random_"+model_list.length+"_witnesses.zip", model_list);
+		}
+	})
+}
 
 function _downloadFile(name, content) {
 	window.__TAURI__.dialog.save({
@@ -411,6 +450,20 @@ function _downloadFile(name, content) {
 			window.__TAURI__.invoke('save_file', { "path": path, "content": content });
 		}
 	}));	
+}
+
+function _downloadZipArchive(name, list_file_contents) {
+	window.__TAURI__.dialog.save({
+		defaultPath: name,
+		filters: [{
+			name: 'ZIP',
+			extensions: ['zip']
+		}]
+	}).then((path => {
+		if (path) {
+			window.__TAURI__.invoke('save_zip_archive', { "path": path, "listFileContents": list_file_contents });
+		}
+	}));
 }
 
 function vector_to_string(vector) {

@@ -155,7 +155,7 @@ pub fn write_class_report_and_dump_bdds(
     zip_writer
         .start_file("model.aeon", FileOptions::default())
         .unwrap();
-    write!(zip_writer, "{}", original_model_str)?;
+    write!(zip_writer, "{original_model_str}")?;
 
     zip_writer.finish().unwrap();
     Ok(())

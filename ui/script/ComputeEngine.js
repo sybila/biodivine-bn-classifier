@@ -37,6 +37,16 @@ let ComputeEngine = {
 			.catch((error) => callback(error, undefined));
 	},
 
+	getTreeWitnesses(num_witnesses, nodeId, randomize = false, callback) {
+		console.log({ "numWitnesses": num_witnesses, "nodeId": parseInt(nodeId), "randomize": randomize });
+		invoke('get_witnesses', { "numWitnesses": num_witnesses, "nodeId": parseInt(nodeId), "randomize": randomize })
+			.then((response) => {
+				console.log("Generating " + response.length + " witnesses.")
+				callback(undefined, response);
+			})
+			.catch((error) => callback(error, undefined));
+	},
+
 	getBifurcationTree(callback, force = false) {
 		invoke('get_decision_tree')
 			.then((response) => {
