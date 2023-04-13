@@ -1,5 +1,9 @@
 Collection of several large models used for tool evaluation.
 
-The 4 properties used for classification are listed in `properties-only.txt`.
+We use the same 4 properties to run classification procedure on each model. 
+These properties are listed as plaintext in `properties-only.txt` for convenience.
 
-Most of the models are here in two versions - one parametrized that also contains properties, and one fixed without properties.
+Subdirectories contain files regarding each tested model.
+- model annotated with properties (input for the classifier) `model-parametrized-annotated.aeon`
+- for most models we also include non-parametrized and non-annotated version of the model `model-fixed.aeon`
+- classification result bundle `model-results.zip` 
