@@ -18,7 +18,7 @@ use json::JsonValue;
 use rand::prelude::StdRng;
 use rand::SeedableRng;
 use std::collections::HashMap;
-use std::fs::{read_to_string, File};
+use std::fs::File;
 use std::io::Read;
 use std::ops::DerefMut;
 use std::sync::Mutex;
@@ -34,9 +34,6 @@ pub mod util;
 struct Arguments {
     /// Path to a zip archive that contains results of the classification.
     results_archive: String,
-
-    /// Path to the original model (in aeon format) that was used for the classification.
-    model: String,
 }
 
 #[tauri::command]
@@ -233,20 +230,17 @@ fn main() {
 
     let args = Arguments::parse();
 
-    // File with the original input containing the model (with formulae as annotations).
-    let model_path = args.model;
-    // Zip archive with classification results.
+    // Open the zip archive with classification results.
     let results_archive = args.results_archive;
-
     let archive_file = File::open(results_archive).unwrap();
     let mut archive = ZipArchive::new(archive_file).unwrap();
 
-    // Read the number of HCTL variables from computation metadata.
+    // Read the number of required HCTL variables from computation metadata.
     let metadata = read_zip_file(&mut archive, "metadata.txt");
     let num_hctl_vars: u16 = metadata.trim().parse::<u16>().unwrap();
 
-    // Load the BN model and generate the extended STG.
-    let aeon_str = read_to_string(model_path.as_str()).unwrap();
+    // Load the BN model (from the archive) and generate the extended STG.
+    let aeon_str = read_zip_file(&mut archive, "model.aeon");
     let bn = BooleanNetwork::try_from(aeon_str.as_str()).unwrap();
     let graph = get_extended_symbolic_graph(&bn, num_hctl_vars);
 

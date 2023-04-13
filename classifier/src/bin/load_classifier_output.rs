@@ -1,4 +1,4 @@
-//! Binary for testing the classifier output loading.
+//! Binary for testing/debugging the loading of classifier's output.
 
 use biodivine_hctl_model_checker::model_checking::get_extended_symbolic_graph;
 use biodivine_lib_bdd::Bdd;

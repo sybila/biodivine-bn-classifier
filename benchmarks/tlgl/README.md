@@ -1,10 +1,10 @@
 Model of T LGL survival network.
 
 The folder contains:
-- complete input for the classifier `model-with-properties.aeon`
+- annotated model (input for the classifier) `model-with-properties.aeon`
 - list containing only the formulae `properties-only.txt`
-- pure model `model-only.aeon`
-- classification results `results.zip`
+- pure model without annotations `model-only.aeon`
+- classification results `results-bundle.zip`
 
 Model information:
 - Publication: https://doi.org/10.1073/pnas.0806447105

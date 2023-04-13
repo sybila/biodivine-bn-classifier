@@ -1,10 +1,10 @@
 Model of MAPK signalling pathway used in the evaluation.
 
 The folder contains:
-- complete input for the classifier `model-with-properties.aeon`
+- annotated model (input for the classifier) `model-with-properties.aeon`
 - list containing only the formulae `properties-only.txt`
-- pure model `model-only.aeon`
-- classification results `results.zip`
+- pure model without annotations `model-only.aeon`
+- classification results `results-bundle.zip`
 
 Model information:
 - Publication: http://dx.doi.org/10.1371/journal.pcbi.1003286

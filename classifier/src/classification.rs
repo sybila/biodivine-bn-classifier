@@ -176,9 +176,10 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
         &property_colors,
         output_zip,
         num_hctl_vars,
+        aeon_str.as_str(),
     )
     .map_err(|e| format!("{e:?}"))?;
-    println!("Output finished.");
+    println!("Results saved to {}.", output_zip);
 
     Ok(())
 }
