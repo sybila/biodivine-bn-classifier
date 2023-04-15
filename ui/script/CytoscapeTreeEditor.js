@@ -233,7 +233,6 @@ let CytoscapeEditor = {
 		}
 
 		ComputeEngine.getNodeUniversalProps(node, (e, props) => {
-			console.log(props);
 			if (props === undefined) {
 				alert(e);
 			} else if (props.length > 0) {
@@ -270,7 +269,36 @@ let CytoscapeEditor = {
 			conditions += "<span class='" + color + "'> ‣ " + attribute + "</span><br>";
 			source = this._cytoscape.edges("[target = \""+pathId+"\"]");
 		}
-		document.getElementById("leaf-necessary-conditions").innerHTML = conditions;	
+		document.getElementById("leaf-necessary-conditions").innerHTML = conditions;
+
+		// add full property names for all properties satisfied in the leaf
+		ComputeEngine.getAllProperties((e, allNamedProps) => {
+			if (allNamedProps === undefined) {
+				alert(e);
+			} else {
+				let node = CytoscapeEditor.getSelectedNodeId();
+				if (node === undefined) {
+					return;
+				}
+
+				ComputeEngine.getNodeUniversalProps(node, (e, nodeProps) => {
+					console.log(nodeProps)
+					let propSpans = "";
+					allNamedProps.forEach(prop => {
+						if (nodeProps.includes(prop.split(" === ")[0])) {
+							let propSpan = "<span> ‣ " + prop + "</span><br><br>";
+							propSpans += propSpan;
+						}
+					});
+					if (propSpans === "") {
+						// in case that class does not satisfy any prop
+						document.getElementById("leaf-full-properties").innerHTML = "-";
+					} else {
+						document.getElementById("leaf-full-properties").innerHTML = propSpans;
+					}
+				});
+			}
+		});
 
 		// Show additional phenotypes if this is a leaf that was created due to precision.
 		let table = document.getElementById("leaf-behavior-table");		

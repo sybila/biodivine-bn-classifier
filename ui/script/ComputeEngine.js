@@ -59,6 +59,11 @@ let ComputeEngine = {
 			.catch((error) => callback(error, undefined));
 	},
 
+	getAllProperties(callback) {
+		invoke('get_all_named_properties')
+			.then((response) => callback(undefined, response))
+			.catch((error) => callback(error, undefined));
+	},
 
 	getBifurcationTree(callback, force = false) {
 		invoke('get_decision_tree')

@@ -67,6 +67,20 @@ async fn get_num_node_networks(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> R
     Ok(format!("{}", tree.all_node_params(node_id).approx_cardinality()))
 }
 
+/// Get all named properties that were used for classification.
+#[tauri::command]
+async fn get_all_named_properties(tree: State<'_, Mutex<Bdt>>) -> Result<Vec<String>, String> {
+    let tree = tree.lock().unwrap();
+
+    let mut properties: Vec<String> = tree
+        .properties()
+        .iter()
+        .map(|(s1, s2)| format!("{} === {}", s1, s2))
+        .collect();
+    properties.sort_by(|a, b| a.as_str().cmp(&b.as_str()));
+    Ok(properties)
+}
+
 /// Get universally satisfied properties in given node.
 #[tauri::command]
 async fn get_node_universal_props(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<Vec<String>, String> {
@@ -390,6 +404,7 @@ fn main() {
             get_decision_tree,
             get_num_node_networks,
             get_node_universal_props,
+            get_all_named_properties,
             auto_expand_tree,
             get_decision_attributes,
             apply_decision_attribute,

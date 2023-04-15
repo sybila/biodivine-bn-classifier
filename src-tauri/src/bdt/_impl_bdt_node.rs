@@ -26,7 +26,7 @@ impl BdtNode {
 
     /// Computes properties that are universally satisfied in that node.
     /// It is hacked a bit for now - assumes that class (outcome) names are of following
-    /// format: "sat_property_1, sat_property_2, ..., sat_property_n" or "-"
+    /// format: "sat_property_1, sat_property_2, ..., sat_property_n (COUNT)" or "- (COUNT)"
     pub fn universally_satisfied_props(&self) -> HashSet<&str> {
         match self {
             BdtNode::Leaf { class, .. } => parse_properties_from_class(class),
@@ -64,11 +64,11 @@ impl BdtNode {
 /// individual properties which define that class.
 fn parse_properties_from_class(outcome: &Outcome) -> HashSet<&str> {
     let outcome_name = outcome.0.as_str();
-    // if no property is satisfied, name of the class is "-"
-    if outcome_name == "-" {
+    // if no property is satisfied, name of the class is "- (COUNT)"
+    if outcome_name == "-" || outcome_name.starts_with("- ") {
         return HashSet::new();
     }
-    outcome_name.split(", ").collect::<HashSet<&str>>()
+    outcome_name.split(" (").collect::<Vec<&str>>()[0].split(", ").collect::<HashSet<&str>>()
 }
 
 /// **(internal)** Utility method for computing cardinality of a collection of classes.
