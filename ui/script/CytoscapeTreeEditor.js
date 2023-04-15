@@ -62,8 +62,13 @@ let CytoscapeEditor = {
 			leafInfo.classList.add("gone");
 			let decisionInfo = document.getElementById("decision-info");
 			decisionInfo.classList.add("gone");
+			let decisionUniversalProps = document.getElementById("decision-universal-props-div");
+			decisionUniversalProps.classList.add("gone");
 			let mixedInfo = document.getElementById("mixed-info");
 			mixedInfo.classList.add("gone");
+			let mixedUniversalProps = document.getElementById("mixed-universal-props-div");
+			mixedUniversalProps.classList.add("gone");
+
 			// Clear decision attribute list:
 			document.getElementById("button-add-variable").classList.remove("gone");
 			document.getElementById("mixed-attributes").classList.add("gone");
@@ -145,7 +150,9 @@ let CytoscapeEditor = {
 		document.getElementById("decision-phenotype-label").innerHTML = 
 			"Outcomes (" + data.treeData.classes.length + "):";
 		let behaviorTable = document.getElementById("decision-behavior-table");		
-		this._renderBehaviorTable(data.treeData.classes, data.treeData.cardinality, behaviorTable);	
+		this._renderBehaviorTable(data.treeData.classes, data.treeData.cardinality, behaviorTable);
+		this._showUniversallySatProps("decision")
+
 	},
 
 	_showMixedPanel(data) {
@@ -181,8 +188,9 @@ let CytoscapeEditor = {
 				});
 			} else {
 				renderAttributeTable(data.id, data.treeData["attributes"], data.treeData.cardinality);
-			}			
-		};	
+			}
+		};
+		this._showUniversallySatProps("mixed")
 	},
 
 	_renderBehaviorTable(classes, totalCardinality, table) {
@@ -217,6 +225,32 @@ let CytoscapeEditor = {
 		}
 	},
 
+	// Argument `nodeType` is a string used to distinguish between "mixed" and "decision" nodes
+	_showUniversallySatProps(nodeType) {
+		let node = CytoscapeEditor.getSelectedNodeId();
+		if (node === undefined) {
+			return;
+		}
+
+		ComputeEngine.getNodeUniversalProps(node, (e, props) => {
+			console.log(props);
+			if (props === undefined) {
+				alert(e);
+			} else if (props.length > 0) {
+				// if there are some universally satisfied properties, show them and enable seeing the div
+				let propSpans = "";
+				props.forEach(prop => {
+					//let propSpan = "<span class=\"green\"> ‣ "+prop+"</span><br>";
+					let propSpan = "<span> ‣ "+prop+"</span><br>";
+					propSpans += propSpan;
+				} );
+				document.getElementById(nodeType+"-universal-props").innerHTML = propSpans;
+				document.getElementById(nodeType+"-universal-props-div").classList.remove("gone");
+			} else {
+				document.getElementById(nodeType+"-universal-props-div").classList.add("gone");
+			}
+		});
+	},
 
 	_showLeafPanel(data) {
 		document.getElementById("leaf-info").classList.remove("gone");

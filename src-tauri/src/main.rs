@@ -67,6 +67,16 @@ async fn get_num_node_networks(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> R
     Ok(format!("{}", tree.all_node_params(node_id).approx_cardinality()))
 }
 
+/// Get universally satisfied properties in given node.
+#[tauri::command]
+async fn get_node_universal_props(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<Vec<String>, String> {
+    let tree = tree.lock().unwrap();
+    let Some(node_id) = BdtNodeId::try_from(node_id, &tree) else {
+        return Err(format!("Invalid node id {node_id}."));
+    };
+    Ok(tree.node_universal_props(node_id).iter().map(|s| s.to_string()).collect())
+}
+
 #[tauri::command]
 async fn save_file(path: &str, content: &str) -> Result<(), String> {
     std::fs::write(path, content).map_err(|e| format!("{e:?}"))
@@ -157,6 +167,9 @@ async fn get_n_witnesses(
     let mut witnesses_bns: Vec<BooleanNetwork> = Vec::new();
     let mut i = 0;
 
+    // just to make it explicit (this condition is also checked before this function is called)
+    assert!((num_witnesses as f64) <= node_colors.approx_cardinality());
+
     // collect `num_witnesses` networks
     while i < num_witnesses && !node_colors.is_empty() {
         // get singleton color for the witness
@@ -177,8 +190,6 @@ async fn get_n_witnesses(
         node_colors = node_colors.minus(&witness_color);
         i += 1;
     }
-
-    // TODO: a message if there is less actual witnesses than required
 
     let witnesses_str = witnesses_bns.into_iter().map(|x| x.to_string()).collect();
     Ok(witnesses_str)
@@ -324,6 +335,7 @@ fn main() {
     // load the property names from model annotations (to later display them)
     let annotations = ModelAnnotation::from_model_string(aeon_str.as_str());
     let properties = read_model_properties(&annotations).unwrap();
+    let properties_map: HashMap::<String, String> = properties.clone().into_iter().collect();
 
     // collect the classification outcomes (colored sets) from the individual BDD dumps
     let mut outcomes = HashMap::new();
@@ -366,7 +378,7 @@ fn main() {
         assert!(outcomes.insert(outcome, color_set).is_none());
     }
 
-    let bdt = Bdt::new_from_graph(outcomes, &graph);
+    let bdt = Bdt::new_from_graph(outcomes, &graph, properties_map);
     let random_state = StdRng::seed_from_u64(1234567890);
     tauri::Builder::default()
         .manage(Mutex::new(bdt))
@@ -377,6 +389,7 @@ fn main() {
             set_tree_precision,
             get_decision_tree,
             get_num_node_networks,
+            get_node_universal_props,
             auto_expand_tree,
             get_decision_attributes,
             apply_decision_attribute,

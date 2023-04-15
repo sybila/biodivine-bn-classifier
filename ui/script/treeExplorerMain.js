@@ -464,6 +464,7 @@ function openRandomTreeWitnesses() {
 	}
 }
 
+// Check if the text value of the element is a valid number of witnesses for selected node
 function checkIfWitnessNumValid(elem) {
 	let node = CytoscapeEditor.getSelectedNodeId();
 	if (node === undefined) {

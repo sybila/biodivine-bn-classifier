@@ -1,4 +1,6 @@
+use std::collections::HashSet;
 use crate::bdt::{BdtNode, OutcomeMap};
+use crate::Outcome;
 
 impl BdtNode {
     /// Computes the cardinality of the parameter set covered by this tree node.
@@ -21,6 +23,52 @@ impl BdtNode {
     pub fn is_unprocessed(&self) -> bool {
         matches!(self, BdtNode::Unprocessed { .. })
     }
+
+    /// Computes properties that are universally satisfied in that node.
+    /// It is hacked a bit for now - assumes that class (outcome) names are of following
+    /// format: "sat_property_1, sat_property_2, ..., sat_property_n" or "-"
+    pub fn universally_satisfied_props(&self) -> HashSet<&str> {
+        match self {
+            BdtNode::Leaf { class, .. } => parse_properties_from_class(class),
+            BdtNode::Decision { classes, .. } => {
+                // start with some random class
+                let mut sat_props: HashSet<&str> = HashSet::new();
+                for (class, _) in classes {
+                    sat_props = parse_properties_from_class(class);
+                }
+                // now intersect it with all classes
+                for (class, _) in classes {
+                    let mut sat_props_class = parse_properties_from_class(class);
+                    sat_props = sat_props.iter().filter_map(|v| sat_props_class.take(v)).collect();
+                }
+                sat_props
+            },
+            BdtNode::Unprocessed { classes, .. } => {
+                // start with some random class
+                let mut sat_props: HashSet<&str> = HashSet::new();
+                for (class, _) in classes {
+                    sat_props = parse_properties_from_class(class);
+                }
+                // now intersect it with all classes
+                for (class, _) in classes {
+                    let mut sat_props_class = parse_properties_from_class(class);
+                    sat_props = sat_props.iter().filter_map(|v| sat_props_class.take(v)).collect();
+                }
+                sat_props
+            },
+        }
+    }
+}
+
+/// **(internal)** Parses a class (outcome) name (of format: "prop1, sat_prop2, ..., prop_n" into
+/// individual properties which define that class.
+fn parse_properties_from_class(outcome: &Outcome) -> HashSet<&str> {
+    let outcome_name = outcome.0.as_str();
+    // if no property is satisfied, name of the class is "-"
+    if outcome_name == "-" {
+        return HashSet::new();
+    }
+    outcome_name.split(", ").collect::<HashSet<&str>>()
 }
 
 /// **(internal)** Utility method for computing cardinality of a collection of classes.

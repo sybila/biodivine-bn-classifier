@@ -53,6 +53,13 @@ let ComputeEngine = {
 			.catch((error) => callback(error, undefined));
 	},
 
+	getNodeUniversalProps(nodeId, callback) {
+		invoke('get_node_universal_props', { "nodeId": parseInt(nodeId)})
+			.then((response) => callback(undefined, response))
+			.catch((error) => callback(error, undefined));
+	},
+
+
 	getBifurcationTree(callback, force = false) {
 		invoke('get_decision_tree')
 			.then((response) => {
