@@ -39,11 +39,17 @@ let ComputeEngine = {
 
 	getTreeWitnesses(num_witnesses, nodeId, randomize = false, callback) {
 		console.log({ "numWitnesses": num_witnesses, "nodeId": parseInt(nodeId), "randomize": randomize });
-		invoke('get_witnesses', { "numWitnesses": num_witnesses, "nodeId": parseInt(nodeId), "randomize": randomize })
+		invoke('get_n_witnesses', { "numWitnesses": num_witnesses, "nodeId": parseInt(nodeId), "randomize": randomize })
 			.then((response) => {
 				console.log("Generating " + response.length + " witnesses.")
 				callback(undefined, response);
 			})
+			.catch((error) => callback(error, undefined));
+	},
+
+	getNumNodeNetworks(nodeId, callback) {
+		invoke('get_num_node_networks', { "nodeId": parseInt(nodeId)})
+			.then((response) => callback(undefined, response))
 			.catch((error) => callback(error, undefined));
 	},
 

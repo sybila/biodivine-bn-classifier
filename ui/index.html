@@ -154,9 +154,12 @@
             </div>            
             <div>
                 <span style="float: left;">Witness count: <span id="leaf-witness-count">12345</span></span>
-                <span class="inline-button" onclick="openSeveralTreeWitnesses();" style="float: right;">First Witness</span>
+                <div id="first-witnesses-count" class="witness-count-input" onfocusout="checkIfWitnessNumValid(this);" contenteditable="" data-placeholder="1" spellcheck="false" autocorrect="off" style="font-size: 16px; float: right;"></div>
+                <span class="inline-button" onclick="openTreeWitnesses();" style="float: right;">First Witness</span>
+
                 <div style="clear: both;"></div>
-                <span class="inline-button" onclick="openSeveralRandomTreeWitnesses();" style="float: right;">Random Witness</span>
+                <div id="random-witnesses-count" class="witness-count-input" onfocusout="checkIfWitnessNumValid(this);" contenteditable="" data-placeholder="1" spellcheck="false" autocorrect="off" style="font-size: 16px; float: right;"></div>
+                <span class="inline-button" onclick="openRandomTreeWitnesses();" style="float: right;">Random Witness</span>
             </div>
 
             <table id="leaf-behavior-table" class="behavior-table gone" style="margin-top: 16px;">

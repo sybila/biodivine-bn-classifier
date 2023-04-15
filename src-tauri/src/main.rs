@@ -57,6 +57,16 @@ async fn get_decision_tree(tree: State<'_, Mutex<Bdt>>) -> Result<String, String
     Ok(tree.to_json().to_string())
 }
 
+/// Get number of networks represented by the node.
+#[tauri::command]
+async fn get_num_node_networks(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<String, String> {
+    let tree = tree.lock().unwrap();
+    let Some(node_id) = BdtNodeId::try_from(node_id, &tree) else {
+        return Err(format!("Invalid node id {node_id}."));
+    };
+    Ok(format!("{}", tree.all_node_params(node_id).approx_cardinality()))
+}
+
 #[tauri::command]
 async fn save_file(path: &str, content: &str) -> Result<(), String> {
     std::fs::write(path, content).map_err(|e| format!("{e:?}"))
@@ -123,13 +133,13 @@ async fn get_witness(
     node_id: usize,
     randomize: bool,
 ) -> Result<String, String> {
-    let singleton_witness = get_witnesses(tree, graph, random_state, 1, node_id, randomize).await?;
+    let singleton_witness = get_n_witnesses(tree, graph, random_state, 1, node_id, randomize).await?;
     assert_eq!(singleton_witness.len(), 1);
     Ok(singleton_witness[0].clone())
 }
 
 #[tauri::command]
-async fn get_witnesses(
+async fn get_n_witnesses(
     tree: State<'_, Mutex<Bdt>>,
     graph: State<'_, Mutex<SymbolicAsyncGraph>>,
     random_state: State<'_, Mutex<StdRng>>,
@@ -366,12 +376,13 @@ fn main() {
             get_tree_precision,
             set_tree_precision,
             get_decision_tree,
+            get_num_node_networks,
             auto_expand_tree,
             get_decision_attributes,
             apply_decision_attribute,
             revert_decision,
             get_witness,
-            get_witnesses,
+            get_n_witnesses,
             save_file,
             save_zip_archive,
         ])
