@@ -1,3 +1,5 @@
+# Properties
+
 # existence of a "checkpoint" state
 #! dynamic_property: p1: #`3{x}: @{x}: (AX (~{x} & AF {x}))`#
 
@@ -9,6 +11,8 @@
 
 # existence of "fork" states in the system (states where system decides which terminal steady state to visit)
 #! dynamic_property: p4: #`3{x}: 3{y}: ((@{x}: ~{y} & AX {x}) & (@{y}: AX {y}) & EF ({x} & (!{z}: AX {z})) & EF ({y} & (!{z}: AX {z})) & AX (EF ({x} & (!{z}: AX {z})) ^ EF ({y} & (!{z}: AX {z}))))`#
+
+## Model
 
 $v_TGFBR_stimulus:true
 $v_Apoptosis:((((((((!v_TGFBR_stimulus & !v_DNA_damage) & !v_ERK) & !v_p38) & v_p53) & !v_AKT) | ((((((!v_TGFBR_stimulus & !v_DNA_damage) & !v_ERK) & v_p38) & v_p53) & !v_AKT) & v_RAS)) | ((((!v_TGFBR_stimulus & v_DNA_damage) & !v_ERK) & v_p53) & !v_AKT)) | (((v_TGFBR_stimulus & !v_ERK) & v_p53) & !v_AKT))
