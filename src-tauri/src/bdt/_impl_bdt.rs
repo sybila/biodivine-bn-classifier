@@ -20,7 +20,7 @@ impl Bdt {
             storage: HashMap::new(),
             next_id: 0,
             precision: None,
-            properties: named_properties
+            properties: named_properties,
         }
         .apply(|t| t.insert_node_with_classes(classes))
     }

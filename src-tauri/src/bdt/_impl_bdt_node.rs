@@ -1,6 +1,6 @@
-use std::collections::HashSet;
 use crate::bdt::{BdtNode, OutcomeMap};
 use crate::Outcome;
+use std::collections::HashSet;
 
 impl BdtNode {
     /// Computes the cardinality of the parameter set covered by this tree node.
@@ -33,29 +33,35 @@ impl BdtNode {
             BdtNode::Decision { classes, .. } => {
                 // start with some random class
                 let mut sat_props: HashSet<&str> = HashSet::new();
-                for (class, _) in classes {
+                for class in classes.keys() {
                     sat_props = parse_properties_from_class(class);
                 }
                 // now intersect it with all classes
-                for (class, _) in classes {
+                for class in classes.keys() {
                     let mut sat_props_class = parse_properties_from_class(class);
-                    sat_props = sat_props.iter().filter_map(|v| sat_props_class.take(v)).collect();
+                    sat_props = sat_props
+                        .iter()
+                        .filter_map(|v| sat_props_class.take(v))
+                        .collect();
                 }
                 sat_props
-            },
+            }
             BdtNode::Unprocessed { classes, .. } => {
                 // start with some random class
                 let mut sat_props: HashSet<&str> = HashSet::new();
-                for (class, _) in classes {
+                for class in classes.keys() {
                     sat_props = parse_properties_from_class(class);
                 }
                 // now intersect it with all classes
-                for (class, _) in classes {
+                for class in classes.keys() {
                     let mut sat_props_class = parse_properties_from_class(class);
-                    sat_props = sat_props.iter().filter_map(|v| sat_props_class.take(v)).collect();
+                    sat_props = sat_props
+                        .iter()
+                        .filter_map(|v| sat_props_class.take(v))
+                        .collect();
                 }
                 sat_props
-            },
+            }
         }
     }
 }
@@ -68,7 +74,9 @@ fn parse_properties_from_class(outcome: &Outcome) -> HashSet<&str> {
     if outcome_name == "-" || outcome_name.starts_with("- ") {
         return HashSet::new();
     }
-    outcome_name.split(" (").collect::<Vec<&str>>()[0].split(", ").collect::<HashSet<&str>>()
+    outcome_name.split(" (").collect::<Vec<&str>>()[0]
+        .split(", ")
+        .collect::<HashSet<&str>>()
 }
 
 /// **(internal)** Utility method for computing cardinality of a collection of classes.

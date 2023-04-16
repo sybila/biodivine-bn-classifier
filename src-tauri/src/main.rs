@@ -13,6 +13,7 @@ use biodivine_lib_bdd::{Bdd, BddPartialValuation};
 use biodivine_lib_param_bn::symbolic_async_graph::{GraphColors, SymbolicAsyncGraph};
 use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
 
+use biodivine_lib_param_bn::biodivine_std::traits::Set;
 use clap::Parser;
 use json::JsonValue;
 use rand::prelude::StdRng;
@@ -23,7 +24,6 @@ use std::io::{Read, Write};
 use std::ops::DerefMut;
 use std::path::Path;
 use std::sync::Mutex;
-use biodivine_lib_param_bn::biodivine_std::traits::Set;
 use tauri::State;
 use zip::write::{FileOptions, ZipWriter};
 use zip::ZipArchive;
@@ -59,12 +59,18 @@ async fn get_decision_tree(tree: State<'_, Mutex<Bdt>>) -> Result<String, String
 
 /// Get number of networks represented by the node.
 #[tauri::command]
-async fn get_num_node_networks(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<String, String> {
+async fn get_num_node_networks(
+    tree: State<'_, Mutex<Bdt>>,
+    node_id: usize,
+) -> Result<String, String> {
     let tree = tree.lock().unwrap();
     let Some(node_id) = BdtNodeId::try_from(node_id, &tree) else {
         return Err(format!("Invalid node id {node_id}."));
     };
-    Ok(format!("{}", tree.all_node_params(node_id).approx_cardinality()))
+    Ok(format!(
+        "{}",
+        tree.all_node_params(node_id).approx_cardinality()
+    ))
 }
 
 /// Get all named properties that were used for classification.
@@ -75,20 +81,27 @@ async fn get_all_named_properties(tree: State<'_, Mutex<Bdt>>) -> Result<Vec<Str
     let mut properties: Vec<String> = tree
         .properties()
         .iter()
-        .map(|(s1, s2)| format!("{} === {}", s1, s2))
+        .map(|(s1, s2)| format!("{s1} === {s2}"))
         .collect();
-    properties.sort_by(|a, b| a.as_str().cmp(&b.as_str()));
+    properties.sort_by(|a, b| a.as_str().cmp(b.as_str()));
     Ok(properties)
 }
 
 /// Get universally satisfied properties in given node.
 #[tauri::command]
-async fn get_node_universal_props(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<Vec<String>, String> {
+async fn get_node_universal_props(
+    tree: State<'_, Mutex<Bdt>>,
+    node_id: usize,
+) -> Result<Vec<String>, String> {
     let tree = tree.lock().unwrap();
     let Some(node_id) = BdtNodeId::try_from(node_id, &tree) else {
         return Err(format!("Invalid node id {node_id}."));
     };
-    Ok(tree.node_universal_props(node_id).iter().map(|s| s.to_string()).collect())
+    Ok(tree
+        .node_universal_props(node_id)
+        .iter()
+        .map(|s| s.to_string())
+        .collect())
 }
 
 #[tauri::command]
@@ -157,7 +170,8 @@ async fn get_witness(
     node_id: usize,
     randomize: bool,
 ) -> Result<String, String> {
-    let singleton_witness = get_n_witnesses(tree, graph, random_state, 1, node_id, randomize).await?;
+    let singleton_witness =
+        get_n_witnesses(tree, graph, random_state, 1, node_id, randomize).await?;
     assert_eq!(singleton_witness.len(), 1);
     Ok(singleton_witness[0].clone())
 }
@@ -208,7 +222,6 @@ async fn get_n_witnesses(
     let witnesses_str = witnesses_bns.into_iter().map(|x| x.to_string()).collect();
     Ok(witnesses_str)
 }
-
 
 #[tauri::command]
 async fn auto_expand_tree(
@@ -349,7 +362,7 @@ fn main() {
     // load the property names from model annotations (to later display them)
     let annotations = ModelAnnotation::from_model_string(aeon_str.as_str());
     let properties = read_model_properties(&annotations).unwrap();
-    let properties_map: HashMap::<String, String> = properties.clone().into_iter().collect();
+    let properties_map: HashMap<String, String> = properties.clone().into_iter().collect();
 
     // collect the classification outcomes (colored sets) from the individual BDD dumps
     let mut outcomes = HashMap::new();

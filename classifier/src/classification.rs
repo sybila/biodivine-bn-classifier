@@ -179,7 +179,7 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
         aeon_str.as_str(),
     )
     .map_err(|e| format!("{e:?}"))?;
-    println!("Results saved to {}.", output_zip);
+    println!("Results saved to {output_zip}.");
 
     Ok(())
 }
