@@ -58,12 +58,13 @@ let CytoscapeEditor = {
 			// Clear remove button
 			CytoscapeEditor._cytoscape.$(".remove-button").remove()
 			// Close panels
-			let leafInfo = document.getElementById("leaf-info");
-			leafInfo.classList.add("gone");
-			let decisionInfo = document.getElementById("decision-info");
-			decisionInfo.classList.add("gone");
-			let mixedInfo = document.getElementById("mixed-info");
-			mixedInfo.classList.add("gone");
+			for (let panel of ["leaf-info", "decision-info", "mixed-info"]) {
+				document.getElementById(panel).classList.add("gone");
+			}
+			// Hide universal property lists
+			for (let list of document.querySelectorAll(".universal-props-container")) {
+				list.classList.add("gone");
+			}
 			// Clear decision attribute list:
 			document.getElementById("button-add-variable").classList.remove("gone");
 			document.getElementById("mixed-attributes").classList.add("gone");
@@ -145,7 +146,8 @@ let CytoscapeEditor = {
 		document.getElementById("decision-phenotype-label").innerHTML = 
 			"Outcomes (" + data.treeData.classes.length + "):";
 		let behaviorTable = document.getElementById("decision-behavior-table");		
-		this._renderBehaviorTable(data.treeData.classes, data.treeData.cardinality, behaviorTable);	
+		this._renderBehaviorTable(data.treeData.classes, data.treeData.cardinality, behaviorTable);
+		this._showUniversalPropValidity("decision-info")
 	},
 
 	_showMixedPanel(data) {
@@ -181,8 +183,9 @@ let CytoscapeEditor = {
 				});
 			} else {
 				renderAttributeTable(data.id, data.treeData["attributes"], data.treeData.cardinality);
-			}			
-		};	
+			}
+		};
+		this._showUniversalPropValidity("mixed-info")
 	},
 
 	_renderBehaviorTable(classes, totalCardinality, table) {
@@ -217,6 +220,57 @@ let CytoscapeEditor = {
 		}
 	},
 
+	// Argument `nodeType` is a string used to distinguish between "mixed" and "decision" nodes
+	_showUniversalPropValidity(panelId) {
+		let node = CytoscapeEditor.getSelectedNodeId();
+		if (node === undefined) {
+			return;
+		}
+
+		ComputeEngine.getAllProperties((e, allNamedProps) => {
+			if (allNamedProps === undefined) {
+				alert(e);
+				return;
+			}
+
+			ComputeEngine.getNodeUniversalSatProps(node, (e, props) => {
+				if (props === undefined) {
+					alert(e);
+					return;
+				}
+				
+				let container = document.querySelector(`#${panelId} .universal-props-container.valid`);
+				let list = document.querySelector(`#${panelId} .universal-valid-props`);
+
+				console.log(`#${panelId} .universal-invalid-props`, list);
+
+				if (props.length == 0) {
+					container.classList.add("gone");
+				} else {
+					container.classList.remove("gone");
+					list.innerHTML = CytoscapeEditor._make_property_list(props, allNamedProps);
+				}
+			});
+
+			ComputeEngine.getNodeUniversalUnsatProps(node, (e, props) => {
+				if (props === undefined) {
+					alert(e);
+					return;
+				}
+				
+				let container = document.querySelector(`#${panelId} .universal-props-container.invalid`);
+				let list = document.querySelector(`#${panelId} .universal-invalid-props`);
+
+				if (props.length == 0) {
+					container.classList.add("gone");
+				} else {
+					container.classList.remove("gone");
+					list.innerHTML = CytoscapeEditor._make_property_list(props, allNamedProps);
+				}
+			})
+
+		});
+	},
 
 	_showLeafPanel(data) {
 		document.getElementById("leaf-info").classList.remove("gone");
@@ -233,10 +287,31 @@ let CytoscapeEditor = {
 			let color = is_positive ? "green" : "red";
 			let pathId = data.source;
 			let attribute = this._cytoscape.getElementById(pathId).data().treeData.attribute_name;
-			conditions += "<span class='" + color + "'> ‣ " + attribute + "</span><br>";
+			conditions += "<li class='" + color + "'>" + attribute + "</li>";
 			source = this._cytoscape.edges("[target = \""+pathId+"\"]");
 		}
-		document.getElementById("leaf-necessary-conditions").innerHTML = conditions;	
+		document.getElementById("leaf-necessary-conditions").innerHTML = conditions;
+
+		// add full property names for all properties satisfied in the leaf
+		ComputeEngine.getAllProperties((e, allNamedProps) => {
+			if (allNamedProps === undefined) {
+				alert(e);
+			} else {
+				let node = CytoscapeEditor.getSelectedNodeId();
+				if (node === undefined) {
+					return;
+				}
+
+				ComputeEngine.getNodeUniversalSatProps(node, (e, nodeProps) => {
+					if (nodeProps.length == 0) {
+						document.getElementById("leaf-full-properties").innerHTML = "-";
+					} else {
+						list = CytoscapeEditor._make_property_list(nodeProps, allNamedProps);
+						document.getElementById("leaf-full-properties").innerHTML = list;
+					}
+				});
+			}
+		});
 
 		// Show additional phenotypes if this is a leaf that was created due to precision.
 		let table = document.getElementById("leaf-behavior-table");		
@@ -246,6 +321,14 @@ let CytoscapeEditor = {
 		} else {
 			table.classList.add("gone");
 		}
+	},
+
+	_make_property_list(properties, allNamesProperties) {
+		let list = "";
+		for (let prop of properties) {
+			list += `<li>${prop} === ${allNamesProperties[prop]}</li>`;
+		}
+		return list;
 	},
 
 	initOptions: function() {

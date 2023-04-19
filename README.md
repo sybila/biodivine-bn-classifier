@@ -67,22 +67,21 @@ hybrid assertions and properties in complex models in the `benchmarks` directory
 
 #### Running classification
 
-Once you have a `annotated-model.aeon` file, you can run the classification engine:
+Once you have an `annotated-model.aeon` file, you can run the classification engine:
 
-`bn-classifier path/to/annotated-model.aeon path/to/output_archive.zip`
+`bn-classifier --output-zip /path/to/output-archive.zip path/to/annotated-model.aeon`
 
-The output is written into the `output_archive.zip` which contains both a plaintext
-`report.txt`, where you can see a summary of the results, as well as raw BDD dumps
+The output is written into the `output-archive.zip` which contains both a plaintext
+`report.txt` where you can see a summary of the results, as well as raw BDD dumps
 (compatible with the [lib-bdd](https://github.com/sybila/biodivine-lib-bdd) string 
 representation) that can be imported into the `hctl-explorer`.
 
 #### Running visualisation
 
 Once you obtain the classification results, you can run the visualisation tool
-using the `hctl-explorer` command. Note that both the annotated model and the 
-result archive are needed as inputs for the visualisation tool.
+using the `hctl-explorer` command. 
 
-`hctl-explorer path/to/classification_result.zip path/to/annotated-model.aeon`
+`hctl-explorer path/to/classification_result.zip`
 
 This command should open a window with an interactive decision tree editor.
 In this editor, you can branch the set of results by conditioning on various
@@ -100,8 +99,8 @@ sample the space of networks that appear in this leaf node.
 To run the prepared example, execute the following commands:
 
 ```
-bn-classifier ./benchmarks/mapk/model-with-properties.aeon example-result.zip
-hctl-explorer ./example-result.zip ./benchmarks/mapk/model-with-properties.aeon
+bn-classifier --output-zip example-result.zip ./benchmarks/mapk/model-with-properties.aeon
+hctl-explorer ./example-result.zip
 ```
 
 ## Development guide
@@ -135,7 +134,7 @@ depends on your OS).
 To run the application directly, you can use (still in the repository root):
 
 ```
-cargo tauri dev -- -- path/to/classification-results.zip path/to/annotated-model.aeon
+cargo tauri dev -- -- path/to/classification-results.zip
 ```
 
 However, note that the application will execute from the `src-tauri` folder, so the arguments

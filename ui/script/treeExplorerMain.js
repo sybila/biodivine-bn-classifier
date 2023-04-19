@@ -193,7 +193,7 @@ function sortAttributes(attributes) {
 
 function renderAttributeTable(id, attributes, totalCardinality) {
 	document.getElementById("mixed-attributes").classList.remove("gone");
-	document.getElementById("mixed-attributes-title").innerHTML = "Attributes (" + attributes.length + "):";
+	document.getElementById("mixed-attributes-title").innerHTML = "Decision Attributes (" + attributes.length + ")";
 	let template = document.getElementById("mixed-attributes-list-item-template");				
 	let list = document.getElementById("mixed-attributes-list");
 	list.innerHTML = "";
@@ -367,7 +367,7 @@ function selectAttribute(node, attr) {
 }
 
 /* Open witness network for the currently selected tree node. */
-function openTreeWitness() {
+function openSingleTreeWitness() {
 	let node = CytoscapeEditor.getSelectedNodeId();
 	if (node === undefined) {
 		return;
@@ -377,13 +377,13 @@ function openTreeWitness() {
 			alert(e);
 		} else {
 			let data = CytoscapeEditor.getSelectedNodeTreeData();
-			_downloadFile(data.class+"_first_witness.aeon", model);
+			_downloadFile(data.class + "_first_witness.aeon", model);
 		}
 	})
 }
 
 /* Open a random witness network for the currently selected tree node. */
-function openRandomTreeWitness() {
+function openSingleRandomTreeWitness() {
 	let node = CytoscapeEditor.getSelectedNodeId();
 	if (node === undefined) {
 		return;
@@ -398,6 +398,102 @@ function openRandomTreeWitness() {
 	})
 }
 
+function downloadTreeWitnesses() {
+	let nodeData = CytoscapeEditor.getSelectedNodeTreeData();
+	let class_prefix = nodeData.class.split("(")[0].trim()
+
+
+	// check that there is no erroneous value
+	let count_element = document.getElementById("witness-count");
+	checkIfWitnessNumValid(count_element)
+		.finally(() => {
+			if (count_element.classList.contains("error")) {
+				return;
+			}
+		
+			let witnessCount = parseInt(count_element.value);
+			let isRandom = document.getElementById("witness-is-random").checked;
+			let seed = parseInt(document.getElementById("witness-seed").value);
+		
+			let archive_name = `witnesses_${class_prefix}_${witnessCount}.zip`;
+		
+			if (isRandom) {
+				if (isNaN(seed)) {
+					alert(`Invalid integer value for the random seed.`);
+					return;
+				} else if (seed < 0) {
+					alert(`Invalid integer value for the random seed. Seed must be non-negative.`);
+					return;
+				}
+				archive_name = `witnesses_${class_prefix}_${witnessCount}_random_${seed}.zip`;
+			} else {
+				seed = undefined;
+			}
+		
+			window.__TAURI__.dialog.save({
+				defaultPath: archive_name,
+				filters: [{
+					name: 'ZIP',
+					extensions: ['zip']
+				}]
+			}).then((path => {
+				if (path) {
+					let loading = document.getElementById("loading-indicator");
+					loading.classList.remove("invisible");
+					window.__TAURI__.invoke('download_witnesses', { 
+						"nodeId": parseInt(CytoscapeEditor.getSelectedNodeId()),
+						"witnessCount": witnessCount,
+						"seed": seed,
+						"path": path,
+					})
+					.then(() => {
+						loading.classList.add("invisible");
+					})
+					.catch((error) => {
+						loading.classList.add("invisible");
+						alert(error);
+					});
+				}
+			}));
+		});
+}
+
+// Check if the text value of the element is a valid number of witnesses for selected node
+async function checkIfWitnessNumValid(elem) {
+	return new Promise(resolve => {
+		let node = CytoscapeEditor.getSelectedNodeId();
+		if (node === undefined) {
+			resolve();
+			return;
+		}
+
+		let input_value = parseInt(elem.value);
+
+		// check if text represent number that is smaller than maximal number of network in the current node
+		if (isNaN(input_value)) {
+			alert(`Invalid integer value.`);
+			elem.classList.add("error");
+			resolve();
+		} else if (input_value < 1) {
+			alert(`Witness count value must be at least 1.`);
+			elem.classList.add("error");
+			resolve();
+		} else {
+			ComputeEngine.getNumNodeNetworks(node, (e, num_total_witnesses) => {
+				if (num_total_witnesses === undefined) {
+					alert(e);
+				} else if (num_total_witnesses < input_value) {
+					alert(`Value "${input_value}" is larger than the actual number of networks (${num_total_witnesses}) in this node.`);
+					elem.classList.add("error");
+				} else {
+					elem.classList.remove("error");
+				}
+				resolve();
+			})
+
+		}
+	});
+}
 
 function _downloadFile(name, content) {
 	window.__TAURI__.dialog.save({
@@ -411,6 +507,20 @@ function _downloadFile(name, content) {
 			window.__TAURI__.invoke('save_file', { "path": path, "content": content });
 		}
 	}));	
+}
+
+function _downloadZipArchive(name, list_file_contents) {
+	window.__TAURI__.dialog.save({
+		defaultPath: name,
+		filters: [{
+			name: 'ZIP',
+			extensions: ['zip']
+		}]
+	}).then((path => {
+		if (path) {
+			window.__TAURI__.invoke('save_zip_archive', { "path": path, "listFileContents": list_file_contents });
+		}
+	}));
 }
 
 function vector_to_string(vector) {

@@ -13,16 +13,19 @@ use biodivine_lib_bdd::{Bdd, BddPartialValuation};
 use biodivine_lib_param_bn::symbolic_async_graph::{GraphColors, SymbolicAsyncGraph};
 use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
 
+use biodivine_lib_param_bn::biodivine_std::traits::Set;
 use clap::Parser;
 use json::JsonValue;
 use rand::prelude::StdRng;
 use rand::SeedableRng;
 use std::collections::HashMap;
-use std::fs::{read_to_string, File};
-use std::io::Read;
+use std::fs::File;
+use std::io::{Read, Write};
 use std::ops::DerefMut;
+use std::path::Path;
 use std::sync::Mutex;
 use tauri::State;
+use zip::write::{FileOptions, ZipWriter};
 use zip::ZipArchive;
 
 pub mod bdt;
@@ -34,9 +37,6 @@ pub mod util;
 struct Arguments {
     /// Path to a zip archive that contains results of the classification.
     results_archive: String,
-
-    /// Path to the original model (in aeon format) that was used for the classification.
-    model: String,
 }
 
 #[tauri::command]
@@ -57,11 +57,169 @@ async fn get_decision_tree(tree: State<'_, Mutex<Bdt>>) -> Result<String, String
     Ok(tree.to_json().to_string())
 }
 
+/// Get number of networks represented by the node.
+#[tauri::command]
+async fn get_num_node_networks(
+    tree: State<'_, Mutex<Bdt>>,
+    node_id: usize,
+) -> Result<String, String> {
+    let tree = tree.lock().unwrap();
+    let Some(node_id) = BdtNodeId::try_from(node_id, &tree) else {
+        return Err(format!("Invalid node id {node_id}."));
+    };
+    let cardinality = tree.all_node_params(node_id).exact_cardinality();
+    Ok(format!("{}", cardinality))
+}
+
+/// Get all named properties that were used for classification.
+#[tauri::command]
+async fn get_all_named_properties(
+    tree: State<'_, Mutex<Bdt>>,
+) -> Result<HashMap<String, String>, String> {
+    let tree = tree.lock().unwrap();
+    Ok(tree.properties().clone())
+}
+
+/// Get universally satisfied properties in given node.
+#[tauri::command]
+async fn get_node_universal_sat_props(
+    tree: State<'_, Mutex<Bdt>>,
+    node_id: usize,
+) -> Result<Vec<String>, String> {
+    let tree = tree.lock().unwrap();
+    let Some(node_id) = BdtNodeId::try_from(node_id, &tree) else {
+        return Err(format!("Invalid node id {node_id}."));
+    };
+    let sat_props = tree.node_universal_sat_props(node_id);
+    let mut sat_props = Vec::from_iter(sat_props.iter().map(|it| it.to_string()));
+    sat_props.sort();
+    Ok(sat_props)
+}
+
+/// Get universally unsatisfied properties in given node.
+#[tauri::command]
+async fn get_node_universal_unsat_props(
+    tree: State<'_, Mutex<Bdt>>,
+    node_id: usize,
+) -> Result<Vec<String>, String> {
+    let tree = tree.lock().unwrap();
+    let Some(node_id) = BdtNodeId::try_from(node_id, &tree) else {
+        return Err(format!("Invalid node id {node_id}."));
+    };
+    let unsat_props = tree.node_universal_unsat_props(node_id);
+    let mut unsat_props = Vec::from_iter(unsat_props.iter().map(|it| it.to_string()));
+    unsat_props.sort();
+    Ok(unsat_props)
+}
+
 #[tauri::command]
 async fn save_file(path: &str, content: &str) -> Result<(), String> {
     std::fs::write(path, content).map_err(|e| format!("{e:?}"))
 }
 
+/// Create a zip archive containing multiple AEON witness networks.
+#[tauri::command]
+async fn save_zip_archive(path: &str, list_file_contents: Vec<&str>) -> Result<(), String> {
+    // Prepare the archive first
+    let archive_path = Path::new(path);
+    // If there are some non existing dirs in path, create them.
+    let prefix = archive_path.parent().unwrap();
+    std::fs::create_dir_all(prefix).map_err(|e| format!("{e:?}"))?;
+    // Create a zip writer for the desired archive.
+    let archive = File::create(archive_path).map_err(|e| format!("{e:?}"))?;
+    let mut zip_writer = ZipWriter::new(archive);
+
+    for (i, file_content) in list_file_contents.iter().enumerate() {
+        zip_writer
+            .start_file(format!("witness_{i}.aeon"), FileOptions::default())
+            .map_err(|e| format!("{e:?}"))?;
+        writeln!(zip_writer, "{file_content}").map_err(|e| format!("{e:?}"))?;
+    }
+
+    zip_writer.finish().map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+
+/// Randomly select a color from the given set of colors.
+/// This is a workaround that should be modified in the future.
+pub fn pick_random_color(
+    rng: &mut StdRng,
+    graph: &SymbolicAsyncGraph,
+    color_set: &GraphColors,
+) -> GraphColors {
+    let ctx = graph.symbolic_context();
+    let random_witness = color_set.as_bdd().random_valuation(rng).unwrap();
+    let mut partial_valuation = BddPartialValuation::empty();
+    for var in ctx.parameter_variables() {
+        partial_valuation.set_value(*var, random_witness[*var]);
+    }
+    let singleton_bdd = ctx
+        .bdd_variable_set()
+        .mk_conjunctive_clause(&partial_valuation);
+    // We can use the "raw copy" function because into the new BDD, we only carried over
+    // the BDD variables that encode network parameters.
+    color_set.copy(singleton_bdd)
+}
+
+#[tauri::command]
+async fn download_witnesses(
+    tree: State<'_, Mutex<Bdt>>,
+    graph: State<'_, Mutex<SymbolicAsyncGraph>>,
+    path: &str,
+    node_id: usize,
+    witness_count: usize,
+    seed: Option<u64>,
+) -> Result<(), String> {
+    // Prepare the archive first
+    let archive_path = Path::new(path);
+    // If there are some non existing dirs in path, create them.
+    let prefix = archive_path.parent().unwrap();
+    std::fs::create_dir_all(prefix).map_err(|e| format!("{e:?}"))?;
+    // Create a zip writer for the desired archive.
+    let archive = File::create(archive_path).map_err(|e| format!("{e:?}"))?;
+    let mut zip_writer = ZipWriter::new(archive);
+
+    let tree = tree.lock().unwrap();
+    let graph = graph.lock().unwrap();
+    let Some(node_id) = BdtNodeId::try_from(node_id, &tree) else {
+        return Err(format!("Invalid node id {node_id}."));
+    };
+
+    let mut node_colors = tree.all_node_params(node_id);
+    let mut i = 0;
+
+    let mut random_state = seed.map(StdRng::seed_from_u64);
+
+    // collect `num_witnesses` networks
+    while i < witness_count && !node_colors.is_empty() {
+        // get singleton color for the witness
+        let witness_color = if let Some(std_rng) = random_state.as_mut() {
+            // For random networks, we need to be a bit more creative... (although, support for
+            // this in lib-param-bn would be nice).
+            pick_random_color(std_rng, &graph, &node_colors)
+        } else {
+            // The `SymbolicAsyncGraph::pick_singleton` should be deterministic.
+            node_colors.pick_singleton()
+        };
+        assert!(witness_color.is_singleton());
+
+        // remove the color from the set
+        node_colors = node_colors.minus(&witness_color);
+        i += 1;
+
+        // Write the network into the zip.
+        let file_content = graph.pick_witness(&witness_color).to_string();
+        zip_writer
+            .start_file(format!("witness_{i}.aeon"), FileOptions::default())
+            .map_err(|e| format!("{e:?}"))?;
+        writeln!(zip_writer, "{file_content}").map_err(|e| format!("{e:?}"))?;
+    }
+
+    zip_writer.finish().map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+
+/// Wrapper to only get a single witness
 #[tauri::command]
 async fn get_witness(
     tree: State<'_, Mutex<Bdt>>,
@@ -70,45 +228,56 @@ async fn get_witness(
     node_id: usize,
     randomize: bool,
 ) -> Result<String, String> {
+    let singleton_witness =
+        get_n_witnesses(tree, graph, random_state, 1, node_id, randomize).await?;
+    assert_eq!(singleton_witness.len(), 1);
+    Ok(singleton_witness.into_iter().next().unwrap())
+}
+
+#[tauri::command]
+async fn get_n_witnesses(
+    tree: State<'_, Mutex<Bdt>>,
+    graph: State<'_, Mutex<SymbolicAsyncGraph>>,
+    random_state: State<'_, Mutex<StdRng>>,
+    num_witnesses: i32,
+    node_id: usize,
+    randomize: bool,
+) -> Result<Vec<String>, String> {
     let tree = tree.lock().unwrap();
     let graph = graph.lock().unwrap();
     let Some(node_id) = BdtNodeId::try_from(node_id, &tree) else {
         return Err(format!("Invalid node id {node_id}."));
     };
 
-    let node_colors = tree.all_node_params(node_id);
-    let witness = if !randomize {
-        // The `SymbolicAsyncGraph::pick_witness` should be deterministic.
-        graph.pick_witness(&node_colors)
-    } else {
-        // For random networks, we need to be a bit more creative... (although, support for
-        // this in lib-param-bn would be nice).
-        let mut generator = random_state.lock().unwrap();
-        let std_rng: &mut StdRng = generator.deref_mut();
-        let random_witness = node_colors.as_bdd().random_valuation(std_rng).unwrap();
+    let mut node_colors = tree.all_node_params(node_id);
+    let mut witnesses_bns: Vec<BooleanNetwork> = Vec::new();
+    let mut i = 0;
 
-        let bdd_vars = graph.symbolic_context().bdd_variable_set();
-        let mut partial_valuation = BddPartialValuation::empty();
-        for var in bdd_vars.variables() {
-            if !graph
-                .symbolic_context()
-                .parameter_variables()
-                .contains(&var)
-            {
-                // Only "copy" the values of parameter variables. The rest should be irrelevant.
-                continue;
-            }
-            partial_valuation.set_value(var, random_witness.value(var));
-        }
-        let singleton_bdd = bdd_vars.mk_conjunctive_clause(&partial_valuation);
-        // We can directly build a `GraphColors` object because we only copied the parameter
-        // variables from the random valuation (although the `pick_witness` method shouldn't
-        // really care about extra variables in the BDD at all).
-        let singleton_set = graph.unit_colors().copy(singleton_bdd);
-        graph.pick_witness(&singleton_set)
-    };
+    // just to make it explicit (this condition is also checked before this function is called)
+    assert!((num_witnesses as f64) <= node_colors.approx_cardinality());
 
-    Ok(witness.to_string())
+    // collect `num_witnesses` networks
+    while i < num_witnesses && !node_colors.is_empty() {
+        // get singleton color for the witness
+        let witness_color = if !randomize {
+            // The `SymbolicAsyncGraph::pick_singleton` should be deterministic.
+            node_colors.pick_singleton()
+        } else {
+            // For random networks, we need to be a bit more creative... (although, support for
+            // this in lib-param-bn would be nice).
+            let mut generator = random_state.lock().unwrap();
+            let std_rng: &mut StdRng = generator.deref_mut();
+            pick_random_color(std_rng, &graph, &node_colors)
+        };
+        assert!(witness_color.is_singleton());
+        witnesses_bns.push(graph.pick_witness(&witness_color));
+
+        // remove the color from the set
+        node_colors = node_colors.minus(&witness_color);
+        i += 1;
+    }
+
+    Ok(witnesses_bns.into_iter().map(|it| it.to_string()).collect())
 }
 
 #[tauri::command]
@@ -233,26 +402,24 @@ fn main() {
 
     let args = Arguments::parse();
 
-    // File with the original input containing the model (with formulae as annotations).
-    let model_path = args.model;
-    // Zip archive with classification results.
+    // Open the zip archive with classification results.
     let results_archive = args.results_archive;
-
     let archive_file = File::open(results_archive).unwrap();
     let mut archive = ZipArchive::new(archive_file).unwrap();
 
-    // Read the number of HCTL variables from computation metadata.
+    // Read the number of required HCTL variables from computation metadata.
     let metadata = read_zip_file(&mut archive, "metadata.txt");
     let num_hctl_vars: u16 = metadata.trim().parse::<u16>().unwrap();
 
-    // Load the BN model and generate the extended STG.
-    let aeon_str = read_to_string(model_path.as_str()).unwrap();
+    // Load the BN model (from the archive) and generate the extended STG.
+    let aeon_str = read_zip_file(&mut archive, "model.aeon");
     let bn = BooleanNetwork::try_from(aeon_str.as_str()).unwrap();
     let graph = get_extended_symbolic_graph(&bn, num_hctl_vars);
 
     // load the property names from model annotations (to later display them)
     let annotations = ModelAnnotation::from_model_string(aeon_str.as_str());
     let properties = read_model_properties(&annotations).unwrap();
+    let properties_map = HashMap::from_iter(properties.iter().cloned());
 
     // collect the classification outcomes (colored sets) from the individual BDD dumps
     let mut outcomes = HashMap::new();
@@ -295,7 +462,7 @@ fn main() {
         assert!(outcomes.insert(outcome, color_set).is_none());
     }
 
-    let bdt = Bdt::new_from_graph(outcomes, &graph);
+    let bdt = Bdt::new_from_graph(outcomes, &graph, properties_map);
     let random_state = StdRng::seed_from_u64(1234567890);
     tauri::Builder::default()
         .manage(Mutex::new(bdt))
@@ -305,12 +472,19 @@ fn main() {
             get_tree_precision,
             set_tree_precision,
             get_decision_tree,
+            get_num_node_networks,
+            download_witnesses,
+            get_node_universal_sat_props,
+            get_node_universal_unsat_props,
+            get_all_named_properties,
             auto_expand_tree,
             get_decision_attributes,
             apply_decision_attribute,
             revert_decision,
             get_witness,
-            save_file
+            get_n_witnesses,
+            save_file,
+            save_zip_archive,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

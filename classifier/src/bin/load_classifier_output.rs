@@ -1,4 +1,4 @@
-//! Binary for testing the classifier output loading.
+//! Binary for testing/debugging the loading of classifier's output.
 
 use biodivine_hctl_model_checker::model_checking::get_extended_symbolic_graph;
 use biodivine_lib_bdd::Bdd;
@@ -56,7 +56,8 @@ pub fn load_classifier_output(
     // collect the colored sets from the BDD dumps together with their "names"
     let mut named_color_sets = Vec::new();
 
-    let files = archive.file_names()
+    let files = archive
+        .file_names()
         .map(|it| it.to_string())
         .collect::<Vec<_>>();
 

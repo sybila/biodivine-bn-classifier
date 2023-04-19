@@ -10,12 +10,17 @@ use std::collections::{HashMap, HashSet};
 
 impl Bdt {
     /// Create a new single-node tree for given classification and attributes.
-    pub fn new(classes: OutcomeMap, attributes: Vec<Attribute>) -> Bdt {
+    pub fn new(
+        classes: OutcomeMap,
+        attributes: Vec<Attribute>,
+        named_properties: HashMap<String, String>,
+    ) -> Bdt {
         Bdt {
             attributes,
             storage: HashMap::new(),
             next_id: 0,
             precision: None,
+            properties: named_properties,
         }
         .apply(|t| t.insert_node_with_classes(classes))
     }
@@ -59,6 +64,12 @@ impl Bdt {
         (0..self.attributes.len()).map(AttributeId)
     }
 
+    /// Getter for all named properties used for classification (some of them might not be used
+    /// in the tree at all). Useful to find out properties universally (un)satisfied in some node.
+    pub fn properties(&self) -> &HashMap<String, String> {
+        &self.properties
+    }
+
     /// Get leaf parameter set if the given node is a leaf.
     pub fn params_for_leaf(&self, node: BdtNodeId) -> Option<&GraphColors> {
         if let BdtNode::Leaf { params, .. } = &self[node] {
@@ -75,6 +86,22 @@ impl Bdt {
             BdtNode::Unprocessed { classes, .. } => Self::class_union(classes),
             BdtNode::Decision { classes, .. } => Self::class_union(classes),
         }
+    }
+
+    /// Compute all parameters that are stored in the given tree node.
+    pub fn node_universal_sat_props(&self, node: BdtNodeId) -> HashSet<&str> {
+        self[node].universally_satisfied_props()
+    }
+
+    pub fn node_universal_unsat_props(&self, node: BdtNodeId) -> HashSet<&str> {
+        let maybe_sat = self[node].existentially_satisfied_props();
+        self.properties
+            .keys()
+            .filter_map(|prop| {
+                let prop = prop.as_str();
+                prop.take_if(|it| !maybe_sat.contains(it))
+            })
+            .collect()
     }
 
     fn class_union(classes: &OutcomeMap) -> GraphColors {

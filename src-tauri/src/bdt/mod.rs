@@ -93,6 +93,8 @@ pub struct AttributeId(usize);
 pub struct Bdt {
     storage: HashMap<usize, BdtNode>,
     attributes: Vec<Attribute>,
+    // Mapping containing all properties used for classification. Maps names to actual formulae.
+    properties: HashMap<String, String>,
     next_id: usize,
     // Represents a hundreds of a percent threshold (So 9350 means 95.30%) at which a mixed node
     // is assumed to be a leaf, or `None` is the tree is exact. We assume that this number is

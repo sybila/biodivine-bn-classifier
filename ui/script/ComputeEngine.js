@@ -37,6 +37,40 @@ let ComputeEngine = {
 			.catch((error) => callback(error, undefined));
 	},
 
+	getTreeWitnesses(num_witnesses, nodeId, randomize = false, callback) {
+		console.log({ "numWitnesses": num_witnesses, "nodeId": parseInt(nodeId), "randomize": randomize });
+		invoke('get_n_witnesses', { "numWitnesses": num_witnesses, "nodeId": parseInt(nodeId), "randomize": randomize })
+			.then((response) => {
+				console.log("Generating " + response.length + " witnesses.")
+				callback(undefined, response);
+			})
+			.catch((error) => callback(error, undefined));
+	},
+
+	getNumNodeNetworks(nodeId, callback) {
+		invoke('get_num_node_networks', { "nodeId": parseInt(nodeId)})
+			.then((response) => callback(undefined, response))
+			.catch((error) => callback(error, undefined));
+	},
+
+	getNodeUniversalSatProps(nodeId, callback) {
+		invoke('get_node_universal_sat_props', { "nodeId": parseInt(nodeId)})
+			.then((response) => callback(undefined, response))
+			.catch((error) => callback(error, undefined));
+	},
+
+	getNodeUniversalUnsatProps(nodeId, callback) {
+        invoke('get_node_universal_unsat_props', { "nodeId": parseInt(nodeId)})
+            .then((response) => callback(undefined, response))
+            .catch((error) => callback(error, undefined));
+    },
+
+	getAllProperties(callback) {
+		invoke('get_all_named_properties')
+			.then((response) => callback(undefined, response))
+			.catch((error) => callback(error, undefined));
+	},
+
 	getBifurcationTree(callback, force = false) {
 		invoke('get_decision_tree')
 			.then((response) => {

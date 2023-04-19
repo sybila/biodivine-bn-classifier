@@ -44,6 +44,7 @@ fn bool_vec_to_string(bool_data: &[bool]) -> String {
 ///  - `property_results`: lists the symbolic color set results for each property.
 ///  - `archive_name`: name of the `.zip` archive with results.
 ///  - `num_hctl_vars`: Maximum number of HCTL variables used across properties/assertions.
+///  - `original_model_str`: original model in the aeon format
 ///
 /// Each result category is given by a set of colors that satisfy exactly the same properties.
 ///
@@ -54,6 +55,7 @@ pub fn write_class_report_and_dump_bdds(
     property_results: &[GraphColors],
     archive_name: &str,
     num_hctl_vars: usize,
+    original_model_str: &str,
 ) -> Result<(), std::io::Error> {
     // TODO:
     //  We are ignoring the zip result errors, but for now I do not want to convert
@@ -148,6 +150,13 @@ pub fn write_class_report_and_dump_bdds(
         .start_file("report.txt", FileOptions::default())
         .unwrap();
     zip_writer.write_all(&report)?;
+
+    // Include the original model in the result bundle (we need to load it later).
+    zip_writer
+        .start_file("model.aeon", FileOptions::default())
+        .unwrap();
+    write!(zip_writer, "{original_model_str}")?;
+
     zip_writer.finish().unwrap();
     Ok(())
 }
@@ -171,7 +180,7 @@ pub fn write_empty_report(
     for assertion in assertion_formulae {
         writeln!(zip_writer, "# {assertion}")?;
     }
-    writeln!(zip_writer, "0 colors satisfy all assertions")?;
+    writeln!(zip_writer, "0 colors satisfy combination of all assertions")?;
     writeln!(zip_writer)?;
 
     zip_writer.finish().unwrap();

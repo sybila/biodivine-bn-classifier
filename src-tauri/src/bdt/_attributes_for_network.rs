@@ -4,9 +4,14 @@ use biodivine_lib_bdd::Bdd;
 use biodivine_lib_param_bn::biodivine_std::traits::Set;
 use biodivine_lib_param_bn::symbolic_async_graph::SymbolicAsyncGraph;
 use biodivine_lib_param_bn::{FnUpdate, VariableId};
+use std::collections::HashMap;
 
 impl Bdt {
-    pub fn new_from_graph(classes: OutcomeMap, graph: &SymbolicAsyncGraph) -> Bdt {
+    pub fn new_from_graph(
+        classes: OutcomeMap,
+        graph: &SymbolicAsyncGraph,
+        named_properties: HashMap<String, String>,
+    ) -> Bdt {
         let mut attributes = Vec::new();
         attributes_for_network_inputs(graph, &mut attributes);
         attributes_for_constant_parameters(graph, &mut attributes);
@@ -25,7 +30,7 @@ impl Bdt {
                 is_not_empty
             })
             .collect();
-        Bdt::new(classes, attributes)
+        Bdt::new(classes, attributes, named_properties)
     }
 }
 

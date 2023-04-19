@@ -231,9 +231,32 @@ body {
     background: #CFD8DC;
 }
 
+.panel-sub-header {
+    font-weight: bold;
+    margin-top: 16px; 
+    display: inline-block; 
+    margin-bottom: 8px;
+    clear: both;
+}
+
+.main-panel ul {
+    list-style: none;
+    padding-inline-start: 0px;
+}
+
+.main-panel li::before {
+    content: "‣";
+    padding-inline: 5px;
+}
+
 .invisible-input {
     position: relative;
     display: inline-block;
+}
+
+.witness-count-input {
+    text-align: center;
+    width: 60px;
 }
 
 .invisible-input input {
@@ -256,7 +279,7 @@ body {
     background-color: rgba(200, 40, 40, 0.4); 
 }
 
-div.invisible-input[contenteditable] {    
+div.invisible-input[contenteditable]{
     max-height: 200px;    
     padding-top: 4px;
     padding-bottom: 4px;
@@ -266,7 +289,7 @@ div.invisible-input[contenteditable] {
     transition: 0.3s;
 }
 
-div.invisible-input[contenteditable]:focus {    
+div.invisible-input[contenteditable]:focus {
     outline: none;
     background-color: #ECEFF1;
     border-radius: 4px;
@@ -292,6 +315,7 @@ div.invisible-input[contenteditable]:empty:not(:focus):before {
     font-family: 'FiraMonoBold', monospace;
 }
 
+/*
 .invisible-input::after {
     position: absolute;
     right: 0px;
@@ -308,6 +332,7 @@ div.invisible-input[contenteditable]:empty:not(:focus):before {
 .invisible-input[disabled]:hover::after {
     opacity: 0;
 }
+*/
 
 .invisible-input.full-line {
     width: 100%;
