@@ -66,8 +66,8 @@ impl Bdt {
 
     /// Getter for all named properties used for classification (some of them might not be used
     /// in the tree at all). Useful to find out properties universally (un)satisfied in some node.
-    pub fn properties(&self) -> HashMap<String, String> {
-        self.properties.clone()
+    pub fn properties(&self) -> &HashMap<String, String> {
+        &self.properties
     }
 
     /// Get leaf parameter set if the given node is a leaf.
