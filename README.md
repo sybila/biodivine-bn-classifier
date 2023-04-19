@@ -67,12 +67,12 @@ hybrid assertions and properties in complex models in the `benchmarks` directory
 
 #### Running classification
 
-Once you have a `annotated-model.aeon` file, you can run the classification engine:
+Once you have an `annotated-model.aeon` file, you can run the classification engine:
 
-`bn-classifier path/to/annotated-model.aeon path/to/output-archive.zip`
+`bn-classifier --output-zip /path/to/output-archive.zip path/to/annotated-model.aeon`
 
 The output is written into the `output-archive.zip` which contains both a plaintext
-`report.txt`, where you can see a summary of the results, as well as raw BDD dumps
+`report.txt` where you can see a summary of the results, as well as raw BDD dumps
 (compatible with the [lib-bdd](https://github.com/sybila/biodivine-lib-bdd) string 
 representation) that can be imported into the `hctl-explorer`.
 
@@ -99,7 +99,7 @@ sample the space of networks that appear in this leaf node.
 To run the prepared example, execute the following commands:
 
 ```
-bn-classifier ./benchmarks/mapk/model-with-properties.aeon example-result.zip
+bn-classifier --output-zip expample-result.zip ./benchmarks/mapk/model-with-properties.aeon
 hctl-explorer ./example-result.zip
 ```
 
