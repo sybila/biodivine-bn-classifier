@@ -30,34 +30,19 @@ impl BdtNode {
     pub fn universally_satisfied_props(&self) -> HashSet<&str> {
         match self {
             BdtNode::Leaf { class, .. } => parse_properties_from_class(class),
-            BdtNode::Decision { classes, .. } => {
-                // start with some random class
-                let mut sat_props: HashSet<&str> = HashSet::new();
-                for class in classes.keys() {
-                    sat_props = parse_properties_from_class(class);
-                }
-                // now intersect it with all classes
-                for class in classes.keys() {
-                    let mut sat_props_class = parse_properties_from_class(class);
+            BdtNode::Decision { classes, .. } | BdtNode::Unprocessed { classes, .. } => {
+                // Start with any class and then compute intersection of all remaining classes.
+                let mut keys = classes.keys();
+                let mut sat_props = if let Some(first_class) = keys.next() {
+                    parse_properties_from_class(first_class)
+                } else {
+                    // Technically this should not happen, but just in case.
+                    HashSet::new()
+                };
+                for class in keys {
                     sat_props = sat_props
-                        .iter()
-                        .filter_map(|v| sat_props_class.take(v))
-                        .collect();
-                }
-                sat_props
-            }
-            BdtNode::Unprocessed { classes, .. } => {
-                // start with some random class
-                let mut sat_props: HashSet<&str> = HashSet::new();
-                for class in classes.keys() {
-                    sat_props = parse_properties_from_class(class);
-                }
-                // now intersect it with all classes
-                for class in classes.keys() {
-                    let mut sat_props_class = parse_properties_from_class(class);
-                    sat_props = sat_props
-                        .iter()
-                        .filter_map(|v| sat_props_class.take(v))
+                        .intersection(&parse_properties_from_class(class))
+                        .cloned()
                         .collect();
                 }
                 sat_props
@@ -74,9 +59,8 @@ fn parse_properties_from_class(outcome: &Outcome) -> HashSet<&str> {
     if outcome_name == "-" || outcome_name.starts_with("- ") {
         return HashSet::new();
     }
-    outcome_name.split(" (").collect::<Vec<&str>>()[0]
-        .split(", ")
-        .collect::<HashSet<&str>>()
+    let prefix = outcome_name.split('(').next().unwrap();
+    prefix.split(',').map(|it| it.trim()).collect()
 }
 
 /// **(internal)** Utility method for computing cardinality of a collection of classes.
