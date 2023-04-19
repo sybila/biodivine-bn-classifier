@@ -99,7 +99,7 @@ sample the space of networks that appear in this leaf node.
 To run the prepared example, execute the following commands:
 
 ```
-bn-classifier --output-zip expample-result.zip ./benchmarks/mapk/model-with-properties.aeon
+bn-classifier --output-zip example-result.zip ./benchmarks/mapk/model-with-properties.aeon
 hctl-explorer ./example-result.zip
 ```
 

@@ -421,6 +421,9 @@ function downloadTreeWitnesses() {
 				if (isNaN(seed)) {
 					alert(`Invalid integer value for the random seed.`);
 					return;
+				} else if (seed < 0) {
+					alert(`Invalid integer value for the random seed. Seed must be non-negative.`);
+					return;
 				}
 				archive_name = `witnesses_${class_prefix}_${witnessCount}_random_${seed}.zip`;
 			} else {
@@ -469,6 +472,10 @@ async function checkIfWitnessNumValid(elem) {
 		// check if text represent number that is smaller than maximal number of network in the current node
 		if (isNaN(input_value)) {
 			alert(`Invalid integer value.`);
+			elem.classList.add("error");
+			resolve();
+		} else if (input_value < 1) {
+			alert(`Witness count value must be at least 1.`);
 			elem.classList.add("error");
 			resolve();
 		} else {
