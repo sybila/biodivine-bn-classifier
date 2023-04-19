@@ -53,11 +53,17 @@ let ComputeEngine = {
 			.catch((error) => callback(error, undefined));
 	},
 
-	getNodeUniversalProps(nodeId, callback) {
-		invoke('get_node_universal_props', { "nodeId": parseInt(nodeId)})
+	getNodeUniversalSatProps(nodeId, callback) {
+		invoke('get_node_universal_sat_props', { "nodeId": parseInt(nodeId)})
 			.then((response) => callback(undefined, response))
 			.catch((error) => callback(error, undefined));
 	},
+
+	getNodeUniversalUnsatProps(nodeId, callback) {
+        invoke('get_node_universal_unsat_props', { "nodeId": parseInt(nodeId)})
+            .then((response) => callback(undefined, response))
+            .catch((error) => callback(error, undefined));
+    },
 
 	getAllProperties(callback) {
 		invoke('get_all_named_properties')

@@ -231,7 +231,25 @@ body {
     background: #CFD8DC;
 }
 
-.invisible-input, .witness-count-input {
+.panel-sub-header {
+    font-weight: bold;
+    margin-top: 16px; 
+    display: inline-block; 
+    margin-bottom: 8px;
+    clear: both;
+}
+
+.main-panel ul {
+    list-style: none;
+    padding-inline-start: 0px;
+}
+
+.main-panel li::before {
+    content: "‣";
+    padding-inline: 5px;
+}
+
+.invisible-input {
     position: relative;
     display: inline-block;
 }
@@ -241,14 +259,14 @@ body {
     width: 60px;
 }
 
-.invisible-input input,.witness-count-input input {
+.invisible-input input {
     font-family: 'FiraMono', monospace;
     background: none;
     border: none;
     font-size: 14px;   
 }
 
-.invisible-input textarea, .witness-count-input textarea {
+.invisible-input textarea {
     font-family: 'FiraMono', monospace;
     background: none;
     border: none;
@@ -257,7 +275,7 @@ body {
     height: 1.25em;
 }
 
-.invisible-input .error, .invisible-input.error, .witness-count-input.error {
+.invisible-input .error, .invisible-input.error {
     background-color: rgba(200, 40, 40, 0.4); 
 }
 
@@ -271,16 +289,7 @@ div.invisible-input[contenteditable]{
     transition: 0.3s;
 }
 
-/* same as for invisible-input, just without padding */
-div.witness-count-input[contenteditable] {
-    max-height: 200px;
-    overflow: auto;
-    word-break: break-all;
-    font-family: 'FiraMono';
-    transition: 0.3s;
-}
-
-div.invisible-input[contenteditable]:focus, div.witness-count-input[contenteditable]:focus {
+div.invisible-input[contenteditable]:focus {
     outline: none;
     background-color: #ECEFF1;
     border-radius: 4px;
@@ -288,24 +297,25 @@ div.invisible-input[contenteditable]:focus, div.witness-count-input[contentedita
 
 /* Magic that enables placeholder inside content editable. */
 /* Sadly, you still have to apply `ensurePlaceholder` to it. */
-div.invisible-input[contenteditable]:empty:not(:focus):before, div.witness-count-input[contenteditable]:empty:not(:focus):before {
+div.invisible-input[contenteditable]:empty:not(:focus):before {
   content:attr(data-placeholder);
   color:grey;
   font-style:italic;
 }
 
-.invisible-input input:focus, .witness-count-input input:focus {
+.invisible-input input:focus {
     outline: none;
     font-weight: bold;
     font-family: 'FiraMonoBold', monospace;
 }
 
-.invisible-input textarea:focus, .witness-count-input textarea:focus {
+.invisible-input textarea:focus {
     outline: none;
     font-weight: bold;
     font-family: 'FiraMonoBold', monospace;
 }
 
+/*
 .invisible-input::after {
     position: absolute;
     right: 0px;
@@ -322,6 +332,7 @@ div.invisible-input[contenteditable]:empty:not(:focus):before, div.witness-count
 .invisible-input[disabled]:hover::after {
     opacity: 0;
 }
+*/
 
 .invisible-input.full-line {
     width: 100%;

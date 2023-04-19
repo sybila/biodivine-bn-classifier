@@ -89,8 +89,19 @@ impl Bdt {
     }
 
     /// Compute all parameters that are stored in the given tree node.
-    pub fn node_universal_props(&self, node: BdtNodeId) -> HashSet<&str> {
+    pub fn node_universal_sat_props(&self, node: BdtNodeId) -> HashSet<&str> {
         self[node].universally_satisfied_props()
+    }
+
+    pub fn node_universal_unsat_props(&self, node: BdtNodeId) -> HashSet<&str> {
+        let maybe_sat = self[node].existentially_satisfied_props();
+        self.properties
+            .keys()
+            .filter_map(|prop| {
+                let prop = prop.as_str();
+                prop.take_if(|it| !maybe_sat.contains(it))
+            })
+            .collect()
     }
 
     fn class_union(classes: &OutcomeMap) -> GraphColors {

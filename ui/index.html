@@ -73,9 +73,14 @@
                 </tr>             
             </table>
 
-            <div id="decision-universal-props-div" class="gone">
-                <span style="font-weight: bold; margin-top: 16px; display: inline-block; margin-bottom: 8px;">Universally valid properties:</span>
-                <div id="decision-universal-props"></div>
+            <div class="universal-props-container valid gone">
+                <span class="panel-sub-header">Universally valid properties:</span>
+                <ul class="universal-valid-props" style="margin-top: 0;"></ul>
+            </div>
+
+            <div class="universal-props-container invalid gone">
+                <span class="panel-sub-header">Universally invalid properties:</span>
+                <ul class="universal-invalid-props" style="margin-top: 0;"></ul>
             </div>
 
         </div>
@@ -94,10 +99,14 @@
                 </tr>
             </table>
 
-            <div id="mixed-universal-props-div" class="gone">
-                <span style="font-weight: bold; margin-top: 16px; display: inline-block; margin-bottom: 8px;">Universally valid properties:</span>
-                <div id="mixed-universal-props"></div>
-                <br>
+            <div class="universal-props-container valid gone">
+                <span class="panel-sub-header">Universally valid properties:</span>
+                <ul class="universal-valid-props" style="margin-top: 0;"></ul>
+            </div>
+
+            <div class="universal-props-container invalid gone">
+                <span class="panel-sub-header">Universally invalid properties:</span>
+                <ul class="universal-invalid-props" style="margin-top: 0;"></ul>
             </div>
 
             <div id="mixed-attributes-list-item-template" class="attribute-panel gone">                
@@ -126,16 +135,21 @@
                 <div class="expand-button">more...</div>
             </div>        
 
-            <div id="auto-expand" style="clear: both; text-align: right; padding-right: 16px;">
-                <button id="button-auto-expand" class="image-button" style="margin-bottom: 16px; margin-right: 16px;">Auto expand (1 level) <img src="img/graph-24px.svg"></button>
+            <span class="panel-sub-header">Automatic tree expansion:</span>      
+            <div id="auto-expand" style="clear: both; text-align: center; padding-right: 16px;">
+                <button id="button-auto-expand" class="image-button" style="margin-bottom: 16px; margin-right: 16px; margin-top: 8px;">Auto expand (1 level) <img src="img/graph-24px.svg"></button>
                 Depth: <input type="range" min="1" max="10" value="1" class="seekbar" id="auto-expand-slider" style="width: 100px; position: relative; top: 8px;">                
-            </div>        
-            <div style="clear: both;">
-                <button id="button-add-variable" class="image-button" style="float: right; margin-bottom: 16px; margin-right: 16px;">Make decision (D) <img src="img/add_box-24px.svg"></button>
+            </div>  
+
+            <span class="panel-sub-header">Manual tree expansion:</span>      
+            <div style="clear: both; text-align: center;">
+                <button id="button-add-variable" class="image-button" style="margin-bottom: 16px; margin-right: 16px; margin-top: 8px;">Make decision (D) <img src="img/add_box-24px.svg"></button>
             </div>
 
             <div id="mixed-attributes" class="gone">
-                <span id="mixed-attributes-title" style="font-weight: bold; margin-top: 16px; display: inline-block; margin-bottom: 8px;">Attributes:</span>
+                <div style="text-align: center;">
+                    <span id="mixed-attributes-title" style="font-weight: bold; margin-top: 16px; display: inline-block; margin-bottom: 8px;">Attributes:</span>
+                </div>
 
                 <div>
                     <b>Sort by:</b>
@@ -164,13 +178,7 @@
                 <span id="leaf-phenotype" style="font-size: 30px;">DDS</span>                            
             </div>            
             <div>
-                <span style="float: left;">Witness count: <span id="leaf-witness-count">12345</span></span>
-                <div id="first-witnesses-count" class="witness-count-input" onfocusout="checkIfWitnessNumValid(this);" contenteditable="" data-placeholder="1" spellcheck="false" autocorrect="off" style="font-size: 16px; float: right;"></div>
-                <span class="inline-button" onclick="openTreeWitnesses();" style="float: right;">First Witness</span>
-
-                <div style="clear: both;"></div>
-                <div id="random-witnesses-count" class="witness-count-input" onfocusout="checkIfWitnessNumValid(this);" contenteditable="" data-placeholder="1" spellcheck="false" autocorrect="off" style="font-size: 16px; float: right;"></div>
-                <span class="inline-button" onclick="openRandomTreeWitnesses();" style="float: right;">Random Witness</span>
+                <span style="float: left;">Witness count: <span id="leaf-witness-count">12345</span></span>                
             </div>
 
             <table id="leaf-behavior-table" class="behavior-table gone" style="margin-top: 16px;">
@@ -182,12 +190,31 @@
             </table>
             <br>
 
-            <span style="font-weight: bold; margin-top: 16px; display: inline-block; margin-bottom: 8px;">Necessary conditions:</span>
-            <div id="leaf-necessary-conditions">Lorem Ipsum</div>
-            <br>
+            <span class="panel-sub-header">Necessary conditions:</span>
+            <ul id="leaf-necessary-conditions" style="margin-top: 0;">Lorem Ipsum</ul>
 
-            <span style="font-weight: bold; margin-top: 16px; display: inline-block; margin-bottom: 8px;">Satisfied properties (full):</span>
-            <div id="leaf-full-properties">Lorem Ipsum</div>
+            <span class="panel-sub-header">Satisfied properties:</span>
+            <ul id="leaf-full-properties" style="margin-top: 0;">Lorem Ipsum</ul>
+
+            <span class="panel-sub-header">Witness networks:</span>
+            <div>
+                <div style="width: 100%; text-align: center;">
+                    <label class="invisible-input">
+                        <span style="display: inline-block; text-align: center; padding: 4px;">Witness<br>count</span>
+                        <input id="witness-count" type="number" value="1" min="1" onfocusout="checkIfWitnessNumValid(this);" style="width: 64px; font-size: 20px; text-align: center; vertical-align: super;"/>
+                    </label>
+                    <label class="invisible-input" style="vertical-align: super; margin-left: 8px; margin-right: 8px;">
+                        Randomize
+                        <input id="witness-is-random" type="checkbox" style="transform: scale(1.5);" onclick="document.getElementById('witness-seed-container').classList.toggle('gone')">
+                    </label>
+                    <label id="witness-seed-container" class="invisible-input gone">
+                        <span style="display: inline-block; text-align: center; padding: 4px;">Random<br>seed</span>
+                        <input id="witness-seed" type="number" value="0" min="0" style="width: 96px; font-size: 20px; text-align: center; vertical-align: super;"/>
+                    </label>
+                    <br>
+                    <button id="button-download-witnesses" class="image-button" style="margin-bottom: 8px; margin-right: 16px; margin-top: 8px;" onclick="downloadTreeWitnesses()">Generate network(s) <img src="img/file_copy-48px.svg"></button>
+                </div>
+            </div>
 
         </div>    
 

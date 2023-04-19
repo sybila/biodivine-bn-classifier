@@ -193,7 +193,7 @@ function sortAttributes(attributes) {
 
 function renderAttributeTable(id, attributes, totalCardinality) {
 	document.getElementById("mixed-attributes").classList.remove("gone");
-	document.getElementById("mixed-attributes-title").innerHTML = "Attributes (" + attributes.length + "):";
+	document.getElementById("mixed-attributes-title").innerHTML = "Decision Attributes (" + attributes.length + ")";
 	let template = document.getElementById("mixed-attributes-list-item-template");				
 	let list = document.getElementById("mixed-attributes-list");
 	list.innerHTML = "";
@@ -398,96 +398,94 @@ function openSingleRandomTreeWitness() {
 	})
 }
 
-/* Open several witness networks for the currently selected tree node. */
-function openTreeWitnesses() {
-	let node = CytoscapeEditor.getSelectedNodeId();
-	if (node === undefined) {
-		return;
-	}
+function downloadTreeWitnesses() {
+	let nodeData = CytoscapeEditor.getSelectedNodeTreeData();
+	let class_prefix = nodeData.class.split("(")[0].trim()
 
-	// get number of witnesses to be opened
-	let count_elem = document.getElementById("first-witnesses-count");
 
 	// check that there is no erroneous value
-	if (count_elem.classList.contains("error")) {
-		alert("\""+count_elem.innerText+"\" is not a valid valid number of witnesses.");
-		return;
-	}
-
-	if (count_elem.innerText === "" || count_elem.innerText === "1") {
-		// default behaviour is to extract a single witness
-		openSingleTreeWitness()
-	} else {
-		// otherwise extract zip with N witnesses
-		let num_witnesses = parseInt(count_elem.innerText); // inner text is definitely a valid number (checked before)
-		ComputeEngine.getTreeWitnesses(num_witnesses, node, false, (e, model_list) => {
-			if (model_list === undefined) {
-				alert(e);
-			} else {
-				let data = CytoscapeEditor.getSelectedNodeTreeData();
-				_downloadZipArchive(data.class+"_first_"+model_list.length+"_witnesses.zip", model_list);
+	let count_element = document.getElementById("witness-count");
+	checkIfWitnessNumValid(count_element)
+		.finally(() => {
+			if (count_element.classList.contains("error")) {
+				return;
 			}
-		})
-	}
-}
-
-/* Open several random witness network for the currently selected tree node. */
-function openRandomTreeWitnesses() {
-	let node = CytoscapeEditor.getSelectedNodeId();
-	if (node === undefined) {
-		return;
-	}
-
-	// get number of witnesses to be opened
-	let count_elem = document.getElementById("random-witnesses-count");
-
-	// check that there is no erroneous value
-	if (count_elem.classList.contains("error")) {
-		alert("\""+count_elem.innerText+"\" is not a valid valid number of witnesses.");
-		return;
-	}
-
-	if (count_elem.innerText === "" || count_elem.innerText === "1") {
-		// default behaviour is to extract a single witness
-		openSingleRandomTreeWitness()
-	} else {
-		// otherwise extract zip with N witnesses
-		let num_witnesses = parseInt(count_elem.innerText); // inner text is definitely a valid number (checked before)
-		ComputeEngine.getTreeWitnesses(num_witnesses, node, true, (e, model_list) => {
-			if (model_list === undefined) {
-				alert(e);
+		
+			let witnessCount = parseInt(count_element.value);
+			let isRandom = document.getElementById("witness-is-random").checked;
+			let seed = parseInt(document.getElementById("witness-seed").value);
+		
+			let archive_name = `witnesses_${class_prefix}_${witnessCount}.zip`;
+		
+			if (isRandom) {
+				if (isNaN(seed)) {
+					alert(`Invalid integer value for the random seed.`);
+					return;
+				}
+				archive_name = `witnesses_${class_prefix}_${witnessCount}_random_${seed}.zip`;
 			} else {
-				let data = CytoscapeEditor.getSelectedNodeTreeData();
-				_downloadZipArchive(data.class+"_random_"+model_list.length+"_witnesses.zip", model_list);
+				seed = undefined;
 			}
-		})
-	}
+		
+			window.__TAURI__.dialog.save({
+				defaultPath: archive_name,
+				filters: [{
+					name: 'ZIP',
+					extensions: ['zip']
+				}]
+			}).then((path => {
+				if (path) {
+					let loading = document.getElementById("loading-indicator");
+					loading.classList.remove("invisible");
+					window.__TAURI__.invoke('download_witnesses', { 
+						"nodeId": parseInt(CytoscapeEditor.getSelectedNodeId()),
+						"witnessCount": witnessCount,
+						"seed": seed,
+						"path": path,
+					})
+					.then(() => {
+						loading.classList.add("invisible");
+					})
+					.catch((error) => {
+						loading.classList.add("invisible");
+						alert(error);
+					});
+				}
+			}));
+		});
 }
 
 // Check if the text value of the element is a valid number of witnesses for selected node
-function checkIfWitnessNumValid(elem) {
-	let node = CytoscapeEditor.getSelectedNodeId();
-	if (node === undefined) {
-		return;
-	}
+async function checkIfWitnessNumValid(elem) {
+	return new Promise(resolve => {
+		let node = CytoscapeEditor.getSelectedNodeId();
+		if (node === undefined) {
+			resolve();
+			return;
+		}
 
-	// check if text represent number that is smaller than maximal number of network in the current node
-	if (isNaN(elem.innerText) && elem.innerText !== "") {
-		alert("\""+elem.innerText+"\" is not a valid integer.");
-		elem.classList.add("error");
-	} else {
-		ComputeEngine.getNumNodeNetworks(node, (e, num_total_witnesses) => {
-			if (num_total_witnesses === undefined) {
-				alert(e);
-			} else if (num_total_witnesses < parseInt(elem.innerText)) {
-				alert("\""+elem.innerText+"\" is larger than actual number of networks ("+"\""+num_total_witnesses+"\""+") represented by the node.");
-				elem.classList.add("error");
-			} else {
-				elem.classList.remove("error");
-			}
-		})
+		let input_value = parseInt(elem.value);
 
-	}
+		// check if text represent number that is smaller than maximal number of network in the current node
+		if (isNaN(input_value)) {
+			alert(`Invalid integer value.`);
+			elem.classList.add("error");
+			resolve();
+		} else {
+			ComputeEngine.getNumNodeNetworks(node, (e, num_total_witnesses) => {
+				if (num_total_witnesses === undefined) {
+					alert(e);
+				} else if (num_total_witnesses < input_value) {
+					alert(`Value "${input_value}" is larger than the actual number of networks (${num_total_witnesses}) in this node.`);
+					elem.classList.add("error");
+				} else {
+					elem.classList.remove("error");
+				}
+				resolve();
+			})
+
+		}
+	});
 }
 
 function _downloadFile(name, content) {
