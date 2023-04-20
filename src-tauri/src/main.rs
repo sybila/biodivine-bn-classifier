@@ -8,7 +8,6 @@ extern crate json;
 
 use crate::bdt::{AttributeId, Bdt, BdtNodeId, Outcome};
 
-use biodivine_hctl_model_checker::model_checking::get_extended_symbolic_graph;
 use biodivine_lib_bdd::{Bdd, BddPartialValuation};
 use biodivine_lib_param_bn::symbolic_async_graph::{GraphColors, SymbolicAsyncGraph};
 use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
@@ -421,14 +420,10 @@ fn main() {
     let archive_file = File::open(archive_path).unwrap();
     let mut archive = ZipArchive::new(archive_file).unwrap();
 
-    // Read the number of required HCTL variables from computation metadata.
-    let metadata = read_zip_file(&mut archive, "metadata.txt");
-    let num_hctl_vars: u16 = metadata.trim().parse::<u16>().unwrap();
-
     // Load the BN model (from the archive) and generate the extended STG.
     let aeon_str = read_zip_file(&mut archive, "model.aeon");
     let bn = BooleanNetwork::try_from(aeon_str.as_str()).unwrap();
-    let graph = get_extended_symbolic_graph(&bn, num_hctl_vars);
+    let graph = SymbolicAsyncGraph::new(bn).unwrap();
 
     // load the property names from model annotations (to later display them)
     let annotations = ModelAnnotation::from_model_string(aeon_str.as_str());

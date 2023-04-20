@@ -170,12 +170,12 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
     // do the classification while printing the report and dumping resulting BDDs
     println!("Classifying based on model-checking results...");
     write_class_report_and_dump_bdds(
+        graph.symbolic_context(),
         &assertions,
         valid_colors,
         &named_properties,
         &property_colors,
         output_zip,
-        num_hctl_vars,
         aeon_str.as_str(),
     )
     .map_err(|e| format!("{e:?}"))?;

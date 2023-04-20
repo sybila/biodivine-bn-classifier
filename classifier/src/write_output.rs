@@ -1,8 +1,11 @@
 //! Finish the classification process and generate the results (report and BDD representation).
 
 use biodivine_lib_param_bn::biodivine_std::traits::Set;
-use biodivine_lib_param_bn::symbolic_async_graph::GraphColors;
+use biodivine_lib_param_bn::symbolic_async_graph::{GraphColors, SymbolicContext};
+use std::collections::HashMap;
 
+use biodivine_lib_bdd::Bdd;
+use biodivine_lib_param_bn::BooleanNetwork;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -35,6 +38,82 @@ fn bool_vec_to_string(bool_data: &[bool]) -> String {
         .collect()
 }
 
+/// Turns a BDD that is a valid representation of coloured state set in the
+/// `model_checking_context` into a BDD of the equivalent set in the `canonical_context`.
+///
+/// The method assumes that variables and parameters are ordered equivalently, they are just
+/// augmented with extra model checking variables that are unused in the original BDD.
+fn sanitize_bdd(
+    model_checking_context: &SymbolicContext,
+    canonical_context: &SymbolicContext,
+    bdd: &Bdd,
+) -> Bdd {
+    // First, build a map that translates a "model checking" symbolic variable
+    // into an equivalent "canonical" variable.
+    let mut variable_map = HashMap::new();
+    let mc_state_variables = model_checking_context.state_variables().iter();
+    let mc_param_variables = model_checking_context.parameter_variables().iter();
+    for mc_var in mc_state_variables.chain(mc_param_variables) {
+        let var_name = model_checking_context.bdd_variable_set().name_of(*mc_var);
+        let c_var = canonical_context
+            .bdd_variable_set()
+            .var_by_name(&var_name)
+            .expect("Mismatch in model variables.");
+        variable_map.insert(*mc_var, c_var);
+    }
+
+    // Then verify that the ordering of these variables is the same across both contexts.
+    let mut mc_variables_sorted = Vec::from_iter(variable_map.keys().cloned());
+    mc_variables_sorted.sort();
+    let mut c_variables_sorted = Vec::from_iter(variable_map.values().cloned());
+    c_variables_sorted.sort();
+    for (mc, c) in mc_variables_sorted.iter().zip(c_variables_sorted.iter()) {
+        assert_eq!(
+            variable_map.get(mc),
+            Some(c),
+            "Mismatch in variable ordering."
+        );
+    }
+
+    // Now we know it is actually safe to translate the BDD.
+
+    // Now we have to do a very dumb thing to translate a BDD variable to its actual "raw index".
+    // Sadly there isn't a nicer way to do this in lib-bdd right now.
+    let mut variable_map = variable_map
+        .into_iter()
+        .map(|(a, b)| (format!("{}", a), format!("{}", b)))
+        .collect::<HashMap<_, _>>();
+    // BDD terminal nodes contain information about the number of variables instead of a variable id.
+    // We have to map this information too in the new BDD.
+    variable_map.insert(
+        format!("{}", model_checking_context.bdd_variable_set().num_vars()),
+        format!("{}", canonical_context.bdd_variable_set().num_vars()),
+    );
+
+    let mc_string = bdd.to_string();
+    let mut c_string: Vec<u8> = Vec::new();
+    write!(c_string, "|").unwrap();
+
+    for mc_node in mc_string.split('|') {
+        if mc_node.is_empty() {
+            // First and last item will be empty because there is an additional separator
+            // at the beginning/end of the string.
+            continue;
+        }
+        let mut node_data = mc_node.split(',');
+        // Low/high links remain the same, but the variable ID is translated.
+        let node_var = node_data.next().unwrap();
+        let node_low = node_data.next().unwrap();
+        let node_high = node_data.next().unwrap();
+        let new_node_var = variable_map
+            .get(node_var)
+            .expect("Model checking BDD is using unexpected variables.");
+        write!(c_string, "{},{},{}|", new_node_var, node_low, node_high).unwrap();
+    }
+
+    Bdd::from_string(&String::from_utf8(c_string).unwrap())
+}
+
 /// Write a short summary regarding each category of the color decomposition, and dump a BDD
 /// encoding the colors, all into the `archive_name` zip.
 ///
@@ -49,17 +128,20 @@ fn bool_vec_to_string(bool_data: &[bool]) -> String {
 /// Each result category is given by a set of colors that satisfy exactly the same properties.
 ///
 pub fn write_class_report_and_dump_bdds(
+    model_checking_context: &SymbolicContext,
     assertion_formulae: &[String],
     all_valid_colors: GraphColors,
     named_property_formulae: &[(String, String)],
     property_results: &[GraphColors],
     archive_name: &str,
-    num_hctl_vars: usize,
     original_model_str: &str,
 ) -> Result<(), std::io::Error> {
     // TODO:
     //  We are ignoring the zip result errors, but for now I do not want to convert
     //  everything to the same type of error...
+
+    let canonical_bn = BooleanNetwork::try_from(original_model_str).unwrap();
+    let canonical_context = SymbolicContext::new(&canonical_bn).unwrap();
 
     let archive_path = Path::new(archive_name);
     // If there are some non existing dirs in path, create them.
@@ -69,12 +151,6 @@ pub fn write_class_report_and_dump_bdds(
     // Create a zip writer for the desired archive.
     let archive = File::create(archive_path)?;
     let mut zip_writer = ZipWriter::new(archive);
-
-    // Write the metadata regarding the number of (symbolic) HCTL vars used during the computation.
-    zip_writer
-        .start_file("metadata.txt", FileOptions::default())
-        .unwrap();
-    writeln!(zip_writer, "{num_hctl_vars}")?;
 
     // We will first write the report into an intermediate buffer,
     // because we want to write it into the zip archive at the end
@@ -141,7 +217,18 @@ pub fn write_class_report_and_dump_bdds(
             zip_writer
                 .start_file(&bdd_file_name, FileOptions::default())
                 .unwrap();
-            category_colors.as_bdd().write_as_string(&mut zip_writer)?;
+
+            // This is an important step where we ensure that the "model checking context"
+            // does not "leak" outside of the BN classifier. In essence, this ensures that the
+            // BDD that we output is compatible with any `SymbolicAsyncGraph` based on the
+            // originally supplied model (i.e. if we want to read the BDD, we don't have to
+            // add any additional state variables to the symbolic context).
+            let sanitized_colors = sanitize_bdd(
+                model_checking_context,
+                &canonical_context,
+                category_colors.as_bdd(),
+            );
+            sanitized_colors.write_as_string(&mut zip_writer)?;
         }
     }
 
