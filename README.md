@@ -79,7 +79,10 @@ representation) that can be imported into the `hctl-explorer`.
 #### Running visualisation
 
 Once you obtain the classification results, you can run the visualisation tool
-using the `hctl-explorer` command. 
+using the `hctl-explorer` command. If you simply start `hctl-explorer` without
+any additional arguments, you will be prompted to select the result archive that 
+you want to explore. Alternatively, you can also give `hctl-explorer` 
+a path to the archive as a command line argument:
 
 `hctl-explorer path/to/classification_result.zip`
 
@@ -109,7 +112,7 @@ To build the application manually, you will need to install Rust compiler from
 [rust-lang.org](https://rust-lang.org) (default installation settings should
 work fine). 
 
-Afterwards, you also need to install [tauri](https://tauri.app/) using 
+Afterward, you also need to install [tauri](https://tauri.app/) using 
 `cargo install tauri-cli`.
 
 #### Compiling `bn-classifier`
