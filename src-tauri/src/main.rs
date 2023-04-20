@@ -24,6 +24,7 @@ use std::io::{Read, Write};
 use std::ops::DerefMut;
 use std::path::Path;
 use std::sync::Mutex;
+use tauri::api::dialog;
 use tauri::State;
 use zip::write::{FileOptions, ZipWriter};
 use zip::ZipArchive;
@@ -36,7 +37,7 @@ pub mod util;
 #[clap(about = "An interactive explorer of HCTL properties through decision trees.")]
 struct Arguments {
     /// Path to a zip archive that contains results of the classification.
-    results_archive: String,
+    results_archive: Option<String>,
 }
 
 #[tauri::command]
@@ -402,9 +403,22 @@ fn main() {
 
     let args = Arguments::parse();
 
+    let archive_path = if let Some(user_path) = args.results_archive {
+        user_path
+    } else {
+        let path = dialog::blocking::FileDialogBuilder::new()
+            .set_title("Pick bn-classifier result archive.")
+            .add_filter("zip", &["zip"])
+            .pick_file();
+        let Some(path) = path else {
+            // Exist silently if no path was chosen.
+            return;
+        };
+        path.to_str().unwrap().to_string()
+    };
+
     // Open the zip archive with classification results.
-    let results_archive = args.results_archive;
-    let archive_file = File::open(results_archive).unwrap();
+    let archive_file = File::open(archive_path).unwrap();
     let mut archive = ZipArchive::new(archive_file).unwrap();
 
     // Read the number of required HCTL variables from computation metadata.
