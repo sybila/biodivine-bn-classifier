@@ -51,7 +51,7 @@ pub fn load_classifier_output(
 
     // Load the BN model and generate extended symbolic graph.
     let bn = BooleanNetwork::try_from_file(model_path).unwrap();
-    let graph = get_extended_symbolic_graph(&bn, num_hctl_vars);
+    let graph = get_extended_symbolic_graph(&bn, num_hctl_vars).unwrap();
 
     // collect the colored sets from the BDD dumps together with their "names"
     let mut named_color_sets = Vec::new();

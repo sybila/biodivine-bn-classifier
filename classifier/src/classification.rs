@@ -134,7 +134,9 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
     }
 
     // Instantiate extended STG with enough variables to evaluate all formulae.
-    let graph = get_extended_symbolic_graph(&bn, num_hctl_vars as u16);
+    let Ok(graph) = get_extended_symbolic_graph(&bn, num_hctl_vars as u16) else {
+        return Err(format!("Unable to generate STG for provided BN model."));
+    };
     println!(
         "Successfully generated model with {} vars and {} params.",
         graph.symbolic_context().num_state_variables(),

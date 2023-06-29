@@ -428,7 +428,7 @@ fn main() {
     // Load the BN model (from the archive) and generate the extended STG.
     let aeon_str = read_zip_file(&mut archive, "model.aeon");
     let bn = BooleanNetwork::try_from(aeon_str.as_str()).unwrap();
-    let graph = get_extended_symbolic_graph(&bn, num_hctl_vars);
+    let graph = get_extended_symbolic_graph(&bn, num_hctl_vars).unwrap();
 
     // load the property names from model annotations (to later display them)
     let annotations = ModelAnnotation::from_model_string(aeon_str.as_str());
