@@ -9,6 +9,7 @@
 //!
 
 pub mod classification;
+pub mod load_inputs;
 pub mod write_output;
 
 use crate::classification::classify;

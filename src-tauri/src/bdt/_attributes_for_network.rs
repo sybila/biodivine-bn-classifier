@@ -94,11 +94,11 @@ fn attributes_for_missing_constraints(graph: &SymbolicAsyncGraph, out: &mut Vec<
         let regulator_is_false = context.mk_state_variable_is_true(reg.get_regulator()).not();
 
         if !reg.is_observable() {
-            let fn_x1_to_1 = fn_is_true.and(&regulator_is_true).var_project(regulator);
-            let fn_x0_to_1 = fn_is_true.and(&regulator_is_false).var_project(regulator);
+            let fn_x1_to_1 = fn_is_true.and(&regulator_is_true).var_exists(regulator);
+            let fn_x0_to_1 = fn_is_true.and(&regulator_is_false).var_exists(regulator);
             let observability = fn_x1_to_1
                 .xor(&fn_x0_to_1)
-                .project(context.state_variables());
+                .exists(context.state_variables());
 
             out.push(Attribute {
                 name: format!(
@@ -117,17 +117,17 @@ fn attributes_for_missing_constraints(graph: &SymbolicAsyncGraph, out: &mut Vec<
         }
 
         if reg.get_monotonicity().is_none() {
-            let fn_x1_to_0 = fn_is_false.and(&regulator_is_true).var_project(regulator);
-            let fn_x0_to_1 = fn_is_true.and(&regulator_is_false).var_project(regulator);
+            let fn_x1_to_0 = fn_is_false.and(&regulator_is_true).var_exists(regulator);
+            let fn_x0_to_1 = fn_is_true.and(&regulator_is_false).var_exists(regulator);
             let non_activation = fn_x0_to_1
                 .and(&fn_x1_to_0)
-                .project(context.state_variables());
+                .exists(context.state_variables());
 
-            let fn_x0_to_0 = fn_is_false.and(&regulator_is_false).var_project(regulator);
-            let fn_x1_to_1 = fn_is_true.and(&regulator_is_true).var_project(regulator);
+            let fn_x0_to_0 = fn_is_false.and(&regulator_is_false).var_exists(regulator);
+            let fn_x1_to_1 = fn_is_true.and(&regulator_is_true).var_exists(regulator);
             let non_inhibition = fn_x0_to_0
                 .and(&fn_x1_to_1)
-                .project(context.state_variables());
+                .exists(context.state_variables());
 
             out.push(Attribute {
                 name: format!(
@@ -273,11 +273,11 @@ fn attributes_for_conditional_observability(graph: &SymbolicAsyncGraph, out: &mu
                 for (condition_name, condition_list, condition_bdd) in contexts {
                     // Restrict to values that satisfy conditions
                     let fn_is_true = fn_is_true.and(&condition_bdd);
-                    let fn_x1_to_1 = fn_is_true.and(&regulator_is_true).var_project(r_var);
-                    let fn_x0_to_1 = fn_is_true.and(&regulator_is_false).var_project(r_var);
+                    let fn_x1_to_1 = fn_is_true.and(&regulator_is_true).var_exists(r_var);
+                    let fn_x0_to_1 = fn_is_true.and(&regulator_is_false).var_exists(r_var);
                     let observability = fn_x1_to_1
                         .xor(&fn_x0_to_1)
-                        .project(context.state_variables());
+                        .exists(context.state_variables());
 
                     out.push(Attribute {
                         name: format!(

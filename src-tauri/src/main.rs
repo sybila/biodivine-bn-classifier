@@ -68,7 +68,7 @@ async fn get_num_node_networks(
         return Err(format!("Invalid node id {node_id}."));
     };
     let cardinality = tree.all_node_params(node_id).exact_cardinality();
-    Ok(format!("{}", cardinality))
+    Ok(format!("{cardinality}"))
 }
 
 /// Get all named properties that were used for classification.
