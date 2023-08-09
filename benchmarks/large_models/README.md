@@ -51,9 +51,10 @@ The standard output should contain the running time for the whole computation.
 The following table gives a summary of the expected results. Naturally, the actual runtime
 will differ based on the performance of your machine.
 
-|   Model   | State space | Parametrisations |  Runtime |
-|:---------:|:-----------:|:----------------:|---------:|
-| Apoptosis |   2.19e12   |      8.61e8      |  39350ms |
-|  Butanol  |   7.37e19   |      8.18e9      |  18310ms |
-|    EGFR   |   2.02e31   |         9        | 209698ms |
-|    MAPK   |    2.62e5   |      1.12e15     |   4949ms |
+|   Model   | State space | Parametrisations |         Runtime |
+|:---------:|:-----------:|:----------------:|----------------:|
+| Apoptosis |   2.19e12   |      8.61e8      |         39350ms |
+|  Butanol  |   7.37e19   |      8.18e9      |         18310ms |
+|   EGFR    |   2.02e31   |        9         |        209698ms |
+|   MAPK    |   2.62e5    |     1.12e15      |          4949ms |
+|  FA BRCA  |   2.68e8    |      1.52e9      |        153120ms |

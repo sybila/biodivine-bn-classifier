@@ -87,12 +87,20 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
         graph.symbolic_context().num_state_variables(),
         graph.symbolic_context().num_parameter_variables(),
     );
+    println!(
+        "Model admits {:.0} parametrisations.",
+        graph.mk_unit_colors().approx_cardinality(),
+    );
 
     println!("Evaluating assertions...");
     // Compute the colors (universally) satisfying the combined assertion formula.
     let assertion_result = model_check_tree_dirty(assertion_tree, &graph)?;
     let valid_colors = get_universal_colors(&graph, &assertion_result);
     println!("Assertions evaluated.");
+    println!(
+        "{:.0} parametrisations satisfy all assertions.",
+        valid_colors.approx_cardinality(),
+    );
 
     if valid_colors.is_empty() {
         println!("No color satisfies given assertions. Aborting.");
