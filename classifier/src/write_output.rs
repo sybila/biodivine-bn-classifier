@@ -38,12 +38,12 @@ fn bool_vec_to_string(bool_data: &[bool]) -> String {
 /// Write a short summary regarding each category of the color decomposition, and dump a BDD
 /// encoding the colors, all into the `archive_name` zip.
 ///
+///  - `assertion_formulae`: list of assertion formulae
 ///  - `all_valid_colors`: represents a "unit color set", i.e. all colors satisfying the
 ///     assertion formulae.
 ///  - `named_property_formulae`: lists the property names with their HCTL formula strings.
 ///  - `property_results`: lists the symbolic color set results for each property.
 ///  - `archive_name`: name of the `.zip` archive with results.
-///  - `num_hctl_vars`: Maximum number of HCTL variables used across properties/assertions.
 ///  - `original_model_str`: original model in the aeon format
 ///
 /// Each result category is given by a set of colors that satisfy exactly the same properties.
@@ -54,7 +54,6 @@ pub fn write_class_report_and_dump_bdds(
     named_property_formulae: &[(String, String)],
     property_results: &[GraphColors],
     archive_name: &str,
-    num_hctl_vars: usize,
     original_model_str: &str,
 ) -> Result<(), std::io::Error> {
     // TODO:
@@ -69,12 +68,6 @@ pub fn write_class_report_and_dump_bdds(
     // Create a zip writer for the desired archive.
     let archive = File::create(archive_path)?;
     let mut zip_writer = ZipWriter::new(archive);
-
-    // Write the metadata regarding the number of (symbolic) HCTL vars used during the computation.
-    zip_writer
-        .start_file("metadata.txt", FileOptions::default())
-        .unwrap();
-    writeln!(zip_writer, "{num_hctl_vars}")?;
 
     // We will first write the report into an intermediate buffer,
     // because we want to write it into the zip archive at the end
@@ -141,6 +134,7 @@ pub fn write_class_report_and_dump_bdds(
             zip_writer
                 .start_file(&bdd_file_name, FileOptions::default())
                 .unwrap();
+
             category_colors.as_bdd().write_as_string(&mut zip_writer)?;
         }
     }

@@ -1,11 +1,15 @@
-//! Components regarding the BN classification based on HCTL properties
+//! Main high-level functionality regarding the BN classification based on HCTL properties.
 
+use crate::load_inputs::*;
 use crate::write_output::{write_class_report_and_dump_bdds, write_empty_report};
-use std::cmp::max;
 
-use biodivine_hctl_model_checker::model_checking::{
-    collect_unique_hctl_vars, get_extended_symbolic_graph, model_check_tree, model_check_trees,
+use biodivine_hctl_model_checker::mc_utils::{
+    collect_unique_hctl_vars, get_extended_symbolic_graph,
 };
+use biodivine_hctl_model_checker::model_checking::{
+    model_check_multiple_trees_dirty, model_check_tree_dirty,
+};
+use biodivine_hctl_model_checker::postprocessing::sanitizing::sanitize_colors;
 use biodivine_hctl_model_checker::preprocessing::node::HctlTreeNode;
 use biodivine_hctl_model_checker::preprocessing::parser::parse_and_minimize_hctl_formula;
 
@@ -15,62 +19,8 @@ use biodivine_lib_param_bn::symbolic_async_graph::{
 };
 use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
 
+use std::cmp::max;
 use std::collections::HashSet;
-
-type NamedFormulaeVec = Vec<(String, String)>;
-
-/// Read the list of assertions from an `.aeon` model annotation object.
-///
-/// The assertions are expected to appear as `#!dynamic_assertion: FORMULA` model annotations
-/// and they are returned in declaration order.
-fn read_model_assertions(annotations: &ModelAnnotation) -> Vec<String> {
-    let Some(list) = annotations.get_value(&["dynamic_assertion"]) else {
-        return Vec::new();
-    };
-    list.lines().map(|it| it.to_string()).collect()
-}
-
-/// Read the list of named properties from an `.aeon` model annotation object.
-///
-/// The properties are expected to appear as `#!dynamic_property: NAME: FORMULA` model annotations.
-/// They are returned in alphabetic order w.r.t. the property name.
-fn read_model_properties(annotations: &ModelAnnotation) -> Result<NamedFormulaeVec, String> {
-    let Some(property_node) = annotations.get_child(&["dynamic_property"]) else {
-        return Ok(Vec::new());
-    };
-    let mut properties = Vec::with_capacity(property_node.children().len());
-    for (name, child) in property_node.children() {
-        if !child.children().is_empty() {
-            // TODO:
-            //  This might actually be a valid (if ugly) way for adding extra meta-data to
-            //  properties, but let's forbid it for now and we can enable it later if
-            //  there is an actual use for it.
-            return Err(format!("Property `{name}` contains nested values."));
-        }
-        let Some(value) = child.value() else {
-            return Err(format!("Found empty dynamic property `{name}`."));
-        };
-        if value.lines().count() > 1 {
-            return Err(format!("Found multiple properties named `{name}`."));
-        }
-        properties.push((name.clone(), value.clone()));
-    }
-    // Sort alphabetically to avoid possible non-determinism down the line.
-    properties.sort_by(|(x, _), (y, _)| x.cmp(y));
-    Ok(properties)
-}
-
-/// Combine all HCTL assertions in the given list into a single conjunction of assertions.
-fn build_combined_assertion(assertions: &[String]) -> String {
-    if assertions.is_empty() {
-        "true".to_string()
-    } else {
-        // Add parenthesis to each assertion.
-        let assertions: Vec<String> = assertions.iter().map(|it| format!("({it})")).collect();
-        // Join them into one big conjunction.
-        assertions.join(" & ")
-    }
-}
 
 /// Return the set of colors for which ALL system states are contained in the given color-vertex
 /// set (i.e., if the given relation is a result of model checking a property, get colors for which
@@ -83,11 +33,6 @@ fn get_universal_colors(
 ) -> GraphColors {
     let complement = stg.unit_colored_vertices().minus(colored_vertices);
     stg.unit_colors().minus(&complement.colors())
-}
-
-/// Extract properties from name-property pairs.
-pub fn extract_properties(named_props: &NamedFormulaeVec) -> Vec<String> {
-    named_props.iter().map(|(_, x)| x.clone()).collect()
 }
 
 /// Perform the classification of Boolean networks based on given properties.
@@ -135,19 +80,27 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
 
     // Instantiate extended STG with enough variables to evaluate all formulae.
     let Ok(graph) = get_extended_symbolic_graph(&bn, num_hctl_vars as u16) else {
-        return Err(format!("Unable to generate STG for provided BN model."));
+        return Err("Unable to generate STG for provided BN model.".to_string());
     };
     println!(
         "Successfully generated model with {} vars and {} params.",
         graph.symbolic_context().num_state_variables(),
         graph.symbolic_context().num_parameter_variables(),
     );
+    println!(
+        "Model admits {:.0} parametrisations.",
+        graph.mk_unit_colors().approx_cardinality(),
+    );
 
     println!("Evaluating assertions...");
     // Compute the colors (universally) satisfying the combined assertion formula.
-    let assertion_result = model_check_tree(assertion_tree, &graph)?;
+    let assertion_result = model_check_tree_dirty(assertion_tree, &graph)?;
     let valid_colors = get_universal_colors(&graph, &assertion_result);
     println!("Assertions evaluated.");
+    println!(
+        "{:.0} parametrisations satisfy all assertions.",
+        valid_colors.approx_cardinality(),
+    );
 
     if valid_colors.is_empty() {
         println!("No color satisfies given assertions. Aborting.");
@@ -163,10 +116,21 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
 
     println!("Evaluating properties...");
     // Model check all properties on the restricted graph.
-    let property_result = model_check_trees(property_trees, &graph)?;
+    let property_result = model_check_multiple_trees_dirty(property_trees, &graph)?;
     let property_colors: Vec<GraphColors> = property_result
         .iter()
         .map(|result| get_universal_colors(&graph, result))
+        .collect();
+
+    // This is an important step where we ensure that the "model checking context"
+    // does not "leak" outside of the BN classifier. In essence, this ensures that the
+    // BDD that we output is compatible with any `SymbolicAsyncGraph` based on the
+    // originally supplied model (i.e. if we want to read the BDD, we don't have to
+    // add any additional state variables to the symbolic context).
+    let valid_colors = sanitize_colors(&graph, &valid_colors);
+    let property_colors: Vec<GraphColors> = property_colors
+        .iter()
+        .map(|c| sanitize_colors(&graph, c))
         .collect();
 
     // do the classification while printing the report and dumping resulting BDDs
@@ -177,7 +141,6 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
         &named_properties,
         &property_colors,
         output_zip,
-        num_hctl_vars,
         aeon_str.as_str(),
     )
     .map_err(|e| format!("{e:?}"))?;
@@ -191,7 +154,7 @@ mod tests {
     use crate::classification::{
         build_combined_assertion, extract_properties, read_model_assertions, read_model_properties,
     };
-    use biodivine_hctl_model_checker::model_checking::collect_unique_hctl_vars;
+    use biodivine_hctl_model_checker::mc_utils::collect_unique_hctl_vars;
     use biodivine_hctl_model_checker::preprocessing::parser::parse_and_minimize_hctl_formula;
     use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
     use std::cmp::max;
