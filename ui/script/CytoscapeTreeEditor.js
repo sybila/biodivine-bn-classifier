@@ -296,7 +296,14 @@ let CytoscapeEditor = {
 		ComputeEngine.getAllProperties((e, allNamedProps) => {
 			if (allNamedProps === undefined) {
 				alert(e);
+			} else if (Object.keys(allNamedProps).length == 0) {
+				// This is not a HCTL result, but some "generic" archive without 
+				// decision properties. As such, we cannot display the property list.
+				document.getElementById("leaf-full-properties-parent").classList.add("gone");
+				return;
 			} else {
+				document.getElementById("leaf-full-properties-parent").classList.remove("gone");
+
 				let node = CytoscapeEditor.getSelectedNodeId();
 				if (node === undefined) {
 					return;

@@ -116,4 +116,10 @@ let ComputeEngine = {
 			.catch((error) => callback(error, undefined));
 	},
 
+	reloadTree(callback) {
+		invoke("reload_tree")
+			.then(() => callback())
+			.catch(() => window.__TAURI__.process.exit(2));
+	}
+
 }

@@ -303,7 +303,8 @@ function autoExpandBifurcationTree(node, depth, fit = true) {
 function loadBifurcationTree(fit = true) {
 	let loading = document.getElementById("loading-indicator");
 	loading.classList.remove("invisible");
-	ComputeEngine.getBifurcationTree((e, r) => {		
+	ComputeEngine.getBifurcationTree((e, r) => {	
+		console.log(r);	
 		if (r !== undefined && r.length > 0) {
 			CytoscapeEditor.removeAll();	// remove old tree if present
 			for (node of r) {
@@ -321,6 +322,12 @@ function loadBifurcationTree(fit = true) {
 			if (fit) {
 				CytoscapeEditor.fit();				
 			}			
+		} else if (r !== undefined) {
+			// If the tree is not undefined but is empty, it means we have the "default"
+			// tree that needs to be replaced with user selection.
+			ComputeEngine.reloadTree(() => {
+				loadBifurcationTree(true);
+			});
 		}			
 		loading.classList.add("invisible");
 	}, true);

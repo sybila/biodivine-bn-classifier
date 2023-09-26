@@ -10,7 +10,7 @@ use crate::bdt::{AttributeId, Bdt, BdtNodeId, Outcome};
 
 use biodivine_lib_bdd::{Bdd, BddPartialValuation};
 use biodivine_lib_param_bn::symbolic_async_graph::{GraphColors, SymbolicAsyncGraph};
-use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
+use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation, RegulatoryGraph};
 
 use biodivine_lib_param_bn::biodivine_std::traits::Set;
 use clap::Parser;
@@ -24,7 +24,7 @@ use std::ops::DerefMut;
 use std::path::Path;
 use std::sync::Mutex;
 use tauri::api::dialog;
-use tauri::State;
+use tauri::{AppHandle, State};
 use zip::write::{FileOptions, ZipWriter};
 use zip::ZipArchive;
 
@@ -358,6 +358,36 @@ async fn revert_decision(tree: State<'_, Mutex<Bdt>>, node_id: usize) -> Result<
     Ok(response.to_string())
 }
 
+/// A command which completely replaces the current graph/tree state
+/// based on a new archive file chosen by the user.
+///
+/// Note that it is up to the GUI to ensure that visible part of the tree is actually
+/// updated properly after this call is finished. Typically, this is done through
+/// `loadBifurcationTree` in `main.js`.
+#[tauri::command]
+async fn reload_tree(
+    app: AppHandle,
+    tree: State<'_, Mutex<Bdt>>,
+    graph: State<'_, Mutex<SymbolicAsyncGraph>>,
+) -> Result<(), ()> {
+    let path = dialog::blocking::FileDialogBuilder::new()
+        .set_title("Pick bn-classifier result archive.")
+        .add_filter("zip", &["zip"])
+        .pick_file();
+    let Some(path) = path else {
+        // Exit silently if no path was chosen.
+        app.exit(2);
+        return Ok(());
+    };
+    let path = path.to_str().unwrap().to_string();
+    let (g, t) = setup_environment(path.as_str());
+    let mut tree = tree.lock().unwrap();
+    *tree = t;
+    let mut graph = graph.lock().unwrap();
+    *graph = g;
+    Ok(())
+}
+
 /// Read the list of named properties from an `.aeon` model annotation object.
 ///
 /// The properties are expected to appear as `#!dynamic_property: NAME: FORMULA` model annotations.
@@ -396,26 +426,12 @@ fn read_zip_file(reader: &mut ZipArchive<File>, file_name: &str) -> String {
     contents
 }
 
-fn main() {
-    // First, read model and classification archive, then build a tree from said archive,
-    // finally, open GUI with the tree.
-
-    let args = Arguments::parse();
-
-    let archive_path = if let Some(user_path) = args.results_archive {
-        user_path
-    } else {
-        let path = dialog::blocking::FileDialogBuilder::new()
-            .set_title("Pick bn-classifier result archive.")
-            .add_filter("zip", &["zip"])
-            .pick_file();
-        let Some(path) = path else {
-            // Exist silently if no path was chosen.
-            return;
-        };
-        path.to_str().unwrap().to_string()
-    };
-
+/// Load a classification archive from the given path into a valid symbolic graph
+/// and decision tree.
+///
+/// This can happen either before the application starts (if path is given as CLI arg),
+/// or after the first window is opened (if no path is given).
+fn setup_environment(archive_path: &str) -> (SymbolicAsyncGraph, Bdt) {
     // Open the zip archive with classification results.
     let archive_file = File::open(archive_path).unwrap();
     let mut archive = ZipArchive::new(archive_file).unwrap();
@@ -452,26 +468,52 @@ fn main() {
         let outcome_id = file.strip_prefix("bdd_dump_").unwrap();
         let outcome_id = outcome_id.strip_suffix(".txt").unwrap();
 
-        let mut valid_properties = Vec::new();
-        for ((name, _formula), is_valid) in properties.iter().zip(outcome_id.chars()) {
-            if is_valid == '1' {
-                valid_properties.push(name.clone());
-            }
-        }
-
-        let outcome_name = if valid_properties.is_empty() {
-            "-".to_string()
+        let outcome = if properties_map.is_empty() {
+            // This is "custom" archive that does not hold HCTL properties, in which case,
+            // we want to display them simply through their IDs, since we don't have the
+            // property.
+            Outcome::from(outcome_id.to_string())
         } else {
-            valid_properties.join(", ")
+            let mut valid_properties = Vec::new();
+            for ((name, _formula), is_valid) in properties.iter().zip(outcome_id.chars()) {
+                if is_valid == '1' {
+                    valid_properties.push(name.clone());
+                }
+            }
+
+            let outcome_name = if valid_properties.is_empty() {
+                "-".to_string()
+            } else {
+                valid_properties.join(", ")
+            };
+
+            Outcome::from(outcome_name)
         };
-
-        let outcome = Outcome::from(outcome_name);
-
         // The insert should create a new item, otherwise the archive is malformed.
         assert!(outcomes.insert(outcome, color_set).is_none());
     }
 
     let bdt = Bdt::new_from_graph(outcomes, &graph, properties_map);
+    (graph, bdt)
+}
+
+fn main() {
+    // First, read model and classification archive, then build a tree from said archive,
+    // finally, open GUI with the tree.
+
+    let args = Arguments::parse();
+
+    let (graph, bdt) = if let Some(user_path) = args.results_archive {
+        setup_environment(user_path.as_str())
+    } else {
+        // Make a fake Boolean network and a fake decision tree. The GUI will force the user
+        // to reload the tree once the window has started.
+        let bn = BooleanNetwork::new(RegulatoryGraph::new(vec!["x".to_string()]));
+        let graph = SymbolicAsyncGraph::new(bn).unwrap();
+        let tree = Bdt::new(HashMap::new(), Vec::new(), HashMap::new());
+        (graph, tree)
+    };
+
     let random_state = StdRng::seed_from_u64(1234567890);
     tauri::Builder::default()
         .manage(Mutex::new(bdt))
@@ -494,6 +536,7 @@ fn main() {
             get_n_witnesses,
             save_file,
             save_zip_archive,
+            reload_tree,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
