@@ -15,14 +15,20 @@ impl Bdt {
         attributes: Vec<Attribute>,
         named_properties: HashMap<String, String>,
     ) -> Bdt {
-        Bdt {
+        let mut tree = Bdt {
             attributes,
             storage: HashMap::new(),
             next_id: 0,
             precision: None,
             properties: named_properties,
+        };
+
+        // An empty tree is technically allowed.
+        if !classes.is_empty() {
+            tree.insert_node_with_classes(classes);
         }
-        .apply(|t| t.insert_node_with_classes(classes))
+
+        tree
     }
 
     /// Sets the precision of this tree in the hundreds of percent (i.e. 9753 becomes 97.53%).
@@ -50,8 +56,12 @@ impl Bdt {
     }
 
     /// Node ID of the tree root.
-    pub fn root_id(&self) -> BdtNodeId {
-        BdtNodeId(0)
+    pub fn root_id(&self) -> Option<BdtNodeId> {
+        if self.storage.is_empty() {
+            None
+        } else {
+            Some(BdtNodeId(0))
+        }
     }
 
     /// Iterator over all valid node ids in this tree.

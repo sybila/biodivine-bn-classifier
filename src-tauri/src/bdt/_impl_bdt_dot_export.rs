@@ -16,7 +16,9 @@ impl Bdt {
         writeln!(out, "digraph G {{")?;
         writeln!(out, "init__ [label=\"\", style=invis, height=0, width=0];")?;
         writeln!(out, "init__ -> 0;")?;
-        self.format_dot_recursive(out, self.root_id())?;
+        if let Some(root) = self.root_id() {
+            self.format_dot_recursive(out, root)?;
+        }
         writeln!(out, "}}")?;
         Ok(())
     }

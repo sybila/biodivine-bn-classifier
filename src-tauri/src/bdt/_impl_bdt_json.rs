@@ -78,7 +78,10 @@ impl Bdt {
         // The order of nodes is irrelevant, but we only want to include nodes that are relevant
         // with the selected precision.
         let mut json_array = JsonValue::Array(vec![]);
-        let mut stack = vec![self.root_id()];
+        let Some(root) = self.root_id() else {
+            return json_array;
+        };
+        let mut stack = vec![root];
         while let Some(top) = stack.pop() {
             let node_json = self.node_to_json(top);
             if node_json.has_key("left") {
