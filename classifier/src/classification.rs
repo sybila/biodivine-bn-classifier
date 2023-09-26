@@ -20,7 +20,6 @@ use biodivine_lib_param_bn::symbolic_async_graph::{
 use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
 
 use std::cmp::max;
-use std::collections::HashSet;
 
 /// Return the set of colors for which ALL system states are contained in the given color-vertex
 /// set (i.e., if the given relation is a result of model checking a property, get colors for which
@@ -69,11 +68,11 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
 
     // Parse all formulae and count the max. number of HCTL variables across formulae.
     let assertion_tree = parse_and_minimize_hctl_formula(&bn, &assertion)?;
-    let mut num_hctl_vars = collect_unique_hctl_vars(assertion_tree.clone(), HashSet::new()).len();
+    let mut num_hctl_vars = collect_unique_hctl_vars(assertion_tree.clone()).len();
     let mut property_trees: Vec<HctlTreeNode> = Vec::new();
     for (_name, formula) in &named_properties {
         let tree = parse_and_minimize_hctl_formula(&bn, formula.as_str())?;
-        let tree_vars = collect_unique_hctl_vars(tree.clone(), HashSet::new()).len();
+        let tree_vars = collect_unique_hctl_vars(tree.clone()).len();
         num_hctl_vars = max(num_hctl_vars, tree_vars);
         property_trees.push(tree);
     }
@@ -158,7 +157,6 @@ mod tests {
     use biodivine_hctl_model_checker::preprocessing::parser::parse_and_minimize_hctl_formula;
     use biodivine_lib_param_bn::{BooleanNetwork, ModelAnnotation};
     use std::cmp::max;
-    use std::collections::HashSet;
 
     #[test]
     /// Test the formulae parsing and variable counting
@@ -178,7 +176,7 @@ mod tests {
         let mut var_count = 0;
         for f in formulae {
             let tree = parse_and_minimize_hctl_formula(&bn, f.as_str()).unwrap();
-            let c = collect_unique_hctl_vars(tree, HashSet::new()).len();
+            let c = collect_unique_hctl_vars(tree).len();
             var_count = max(c, var_count);
         }
         assert_eq!(var_count, 2);
