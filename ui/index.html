@@ -17,7 +17,7 @@
         <script src="script/treeExplorerMain.js"></script>        
     </head>
 
-    <body onload="init()" id="tree-explorer">
+    <body onload="init()" id="tree-explorer" style="overflow: hidden;">
 
         <div id="cytoscape-editor">
         </div>
@@ -226,14 +226,20 @@
               <input id="mass-distribution" type="checkbox">
               <span class="slider round"></span>
             </label>
-        </div> 
+        </div>
 
         <div id="precision">
             <input type="range" min="5001" max="10000" value="10000" class="seekbar" id="precision-slider">
             Precision: <span id="precision-value">100%</span>
-        </div>        
+        </div>
 
-        <div id="loading-indicator" class="invisible"><img src="img/progress.gif"/><br><br>Waiting for server...</div>       
+        <div id="tree-export" class="gone">
+            <button id="button-export-tree" class="image-button" style="margin-bottom: 8px; margin-right: 16px; margin-top: 8px;" onclick="exportTree()">
+                Export decision tree
+                <img src="img/file_copy-48px.svg">
+            </button>
+        </div>
 
+        <div id="loading-indicator" class="invisible"><img src="img/progress.gif"/><br><br>Waiting for server...</div>
     </body>
 </html>

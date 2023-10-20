@@ -931,6 +931,14 @@ div.center {
     width: 200px;
 }
 
+#tree-export {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    text-align: center;
+    width: 275px;
+}
+
 /* The slider itself */
 .seekbar {
   -webkit-appearance: none;  /* Override default CSS styles */

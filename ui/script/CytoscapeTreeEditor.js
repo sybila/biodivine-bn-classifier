@@ -19,10 +19,14 @@ let CytoscapeEditor = {
 		this._cytoscape = cytoscape(this.initOptions());			
 		this._cytoscape.on('select', (e) => {
 			document.getElementById("quick-help").classList.add("gone");
+
+			// Add again export button (if removed when mixed panel was shown in extended version)
+			document.getElementById("tree-export").classList.remove("gone");
+
 			console.log(e.target.data());
 			let data = e.target.data();
 			if (data.action == 'remove') {
-				// This is a remove button for a specifc tree node.
+				// This is a remove button for a specific tree node.
 				removeNode(data.targetId);
 			} else if (data.type == "leaf") {
 				this._showLeafPanel(data)
@@ -57,6 +61,8 @@ let CytoscapeEditor = {
 		this._cytoscape.on('unselect', (e) => {
 			// Clear remove button
 			CytoscapeEditor._cytoscape.$(".remove-button").remove()
+			// Add again export button (if removed when mixed panel was shown in extended version)
+			document.getElementById("tree-export").classList.remove("gone");
 			// Close panels
 			for (let panel of ["leaf-info", "decision-info", "mixed-info"]) {
 				document.getElementById(panel).classList.add("gone");
@@ -162,7 +168,9 @@ let CytoscapeEditor = {
 				loading.classList.remove("invisible");			
 				ComputeEngine.getDecisionAttributes(data.id, (e, r) => {
 					loading.classList.add("invisible");
-					addButton.classList.add("gone");				
+					// Remove export button for now (to not interfere)
+					document.getElementById("tree-export").classList.add("gone");
+					addButton.classList.add("gone");
 					for (attr of r) {
 						// Prepare data:
 						attr.left.sort(function(a, b) { return b.cardinality - a.cardinality; });
@@ -182,6 +190,8 @@ let CytoscapeEditor = {
 					renderAttributeTable(data.id, r, data.treeData.cardinality);
 				});
 			} else {
+				// Remove export button for now (to not interfere)
+				document.getElementById("tree-export").classList.add("gone");
 				renderAttributeTable(data.id, data.treeData["attributes"], data.treeData.cardinality);
 			}
 		};

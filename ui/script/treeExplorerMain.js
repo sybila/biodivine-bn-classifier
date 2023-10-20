@@ -304,7 +304,7 @@ function loadBifurcationTree(fit = true) {
 	let loading = document.getElementById("loading-indicator");
 	loading.classList.remove("invisible");
 	ComputeEngine.getBifurcationTree((e, r) => {	
-		console.log(r);	
+		console.log(r);
 		if (r !== undefined && r.length > 0) {
 			CytoscapeEditor.removeAll();	// remove old tree if present
 			for (node of r) {
@@ -321,7 +321,9 @@ function loadBifurcationTree(fit = true) {
 			CytoscapeEditor.applyTreeLayout();
 			if (fit) {
 				CytoscapeEditor.fit();				
-			}			
+			}
+			// Once the real tree is loaded (not a "default" one), show button for tree export
+			document.getElementById("tree-export").classList.remove("gone");
 		} else if (r !== undefined) {
 			// If the tree is not undefined but is empty, it means we have the "default"
 			// tree that needs to be replaced with user selection.
@@ -463,6 +465,31 @@ function downloadTreeWitnesses() {
 				}
 			}));
 		});
+}
+
+function exportTree() {
+	let file_name = `decision_tree.dot`;
+
+	window.__TAURI__.dialog.save({
+		defaultPath: file_name,
+		filters: [{
+			name: 'DOT',
+			extensions: ['dot']
+		}]
+	}).then((path => {
+		if (path) {
+			let loading = document.getElementById("loading-indicator");
+			loading.classList.remove("invisible");
+			window.__TAURI__.invoke('export_tree', {"path": path})
+				.then(() => {
+					loading.classList.add("invisible");
+				})
+				.catch((error) => {
+					loading.classList.add("invisible");
+					alert(error);
+				});
+		}
+	}));
 }
 
 // Check if the text value of the element is a valid number of witnesses for selected node

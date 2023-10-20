@@ -219,6 +219,19 @@ async fn download_witnesses(
     Ok(())
 }
 
+#[tauri::command]
+async fn export_tree(tree: State<'_, Mutex<Bdt>>, path: &str) -> Result<(), String> {
+    let tree = tree.lock().unwrap();
+    let tree_dot = tree.to_dot();
+
+    let file_path = Path::new(path);
+    // If there are some non existing dirs in path, create them.
+    let prefix = file_path.parent().unwrap();
+    std::fs::create_dir_all(prefix).map_err(|e| format!("{e:?}"))?;
+
+    std::fs::write(file_path, tree_dot).map_err(|e| format!("{e:?}"))
+}
+
 /// Wrapper to only get a single witness
 #[tauri::command]
 async fn get_witness(
@@ -525,6 +538,7 @@ fn main() {
             get_decision_tree,
             get_num_node_networks,
             download_witnesses,
+            export_tree,
             get_node_universal_sat_props,
             get_node_universal_unsat_props,
             get_all_named_properties,
