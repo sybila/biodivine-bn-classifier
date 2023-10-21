@@ -1,0 +1,17 @@
+Model path case-study-mapk/mapk-annotated.aeon
+Loaded model and properties out of `case-study-mapk/mapk-annotated.aeon`.
+Parsing formulae and generating symbolic representation...
+Successfully parsed all 1 required property (assertion) and all 4 classification properties.
+Successfully encoded model with 18 variables and 4 parameters.
+Model admits 16 instances.
+Evaluating required properties (this may take some time)...
+Required properties successfully evaluated.
+15 instances satisfy all required properties.
+Evaluating classification properties (this may take some time)...
+Classification properties successfully evaluated.
+Generating classification mapping based on model-checking results...
+Results saved to `case-study-mapk/mapk-annotated-archive.zip`.
+
+real    1m55,605s
+user    1m55,165s
+sys     0m0,420s

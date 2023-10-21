@@ -1,0 +1,172 @@
+
+# universally reachable steady states
+#! dynamic_property: p1: #`3{x}: V{y}: (@{y}: EF ({x} & (!{z}: AX {z})))`#
+
+# pair of steady states
+#! dynamic_property: p2: #`3{x}: 3{y}: ((@{x}: ~{y} & AX {x}) & (@{y}: AX {y}))`#
+
+# states allowing to reach 2 attractors
+#! dynamic_property: p3: #`3{x}: 3{y}: (@{x}: (EF ({y} & (!{z}: AX {z})) & EF (~{y} & (!{z}: AX {z}))))`#
+
+# "checkpoint" states
+#! dynamic_property: p4: #`3{x}: (@{x}: (AX (~{x} & AF {x})))`#
+
+x61 -> x63
+x4 -> x63
+x39 -> x63
+x21 -> x61
+x51 -> x61
+x50 -> x61
+x23 -> x61
+x31 -> x56
+x38 -> x56
+x61 -> x62
+x44 -> x62
+x24 -> x57
+x14 -> x57
+x22 -> x24
+x52 -> x24
+x63 -> x6
+x57 -> x6
+x48 -> x34
+x62 -> x9
+x1 -> x1
+x36 -> x1
+x62 -> x27
+x52 -> x52
+x69 -> x52
+x47 -> x52
+x61 -> x46
+x62 -> x10
+x69 -> x68
+x29 -> x68
+x28 -> x68
+x56 -> x12
+x62 -> x43
+x21 -> x20
+x1 -> x20
+x62 -> x54
+x69 -> x66
+x13 -> x66
+x32 -> x66
+x62 -> x40
+x34 -> x39
+x65 -> x39
+x55 -> x64
+x45 -> x64
+x3 -> x23
+x62 -> x5
+x57 -> x7
+x63 -> x7
+x18 -> x59
+x6 -> x59
+x58 -> x59
+x7 -> x59
+x34 -> x35
+x54 -> x67
+x11 -> x67
+x27 -> x67
+x62 -> x26
+x61 -> x45
+x53 -| x45
+x62 -> x45
+x62 -> x41
+x37 -> x38
+x62 -> x33
+x33 -> x60
+x10 -> x60
+x9 -> x60
+x5 -> x60
+x8 -> x60
+x41 -> x60
+x26 -> x60
+x62 -> x55
+x62 -> x19
+x62 -> x8
+x42 -> x50
+x62 -> x16
+x61 -> x49
+x62 -> x17
+x52 -> x22
+x40 -> x25
+x19 -> x25
+x16 -> x25
+x17 -| x70
+x66 -> x37
+x63 -> x18
+x56 -> x15
+x61 -> x21
+x2 -> x21
+x30 -| x69
+x63 -> x58
+x62 -> x11
+$x1: (x1 & x36)
+$x2: true
+$x3: true
+$x4: true
+$x5: x62
+$x6: (x63 | x57)
+$x7: (x57 | x63)
+$x8: x62
+$x9: x62
+$x10: x62
+$x11: x62
+$x12: x56
+$x13: true
+$x14: true
+$x15: x56
+$x16: x62
+$x17: x62
+$x18: x63
+$x19: x62
+$x20: (x21 & x1)
+$x21: (x61 & x2)
+$x22: x52
+$x23: x3
+$x24: (x22 | x52)
+$x25: ((x40 | x19) | x16)
+$x26: x62
+$x27: x62
+$x28: true
+$x29: true
+$x30: true
+$x31: true
+$x32: true
+$x33: x62
+$x34: x48
+$x35: x34
+$x36: true
+$x37: x66
+$x38: x37
+$x39: (x34 | x65)
+$x40: x62
+$x41: x62
+$x42: true
+$x43: x62
+$x44: true
+$x45: ((x61 | !x53) | x62)
+$x46: x61
+$x47: true
+$x48: true
+$x49: x61
+$x50: x42
+$x51: true
+$x52: ((x69 | x47) & x52)
+$x53: true
+$x54: x62
+$x55: x62
+$x56: (x31 & x38)
+$x57: (x24 & x14)
+$x58: x63
+$x59: (((((x18 | x6) | x58) | x7) | x7) | x6)
+$x60: ((((((x33 | x10) | x9) | x5) | x8) | x41) | x26)
+$x61: (((x51 | x50) & x21) | x23)
+$x62: (x61 & x44)
+$x63: ((x4 | x39) & x61)
+$x64: (x55 | x45)
+$x65: true
+$x66: ((x13 | x32) & x69)
+$x67: ((x54 | x11) | x27)
+$x68: ((x29 | x28) & x69)
+$x69: !x30
+$x70: !x17

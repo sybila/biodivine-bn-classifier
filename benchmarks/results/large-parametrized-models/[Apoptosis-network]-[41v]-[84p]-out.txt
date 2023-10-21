@@ -1,0 +1,17 @@
+Model path models/large-parametrized-models/[Apoptosis-network]-[41v]-[84p].aeon
+Loaded model and properties out of `models/large-parametrized-models/[Apoptosis-network]-[41v]-[84p].aeon`.
+Parsing formulae and generating symbolic representation...
+Successfully parsed all 0 required properties (assertions) and all 4 classification properties.
+Successfully encoded model with 41 variables and 100 parameters.
+Model admits 263662760448 instances.
+Evaluating required properties (this may take some time)...
+Required properties successfully evaluated.
+263662760448 instances satisfy all required properties.
+Evaluating classification properties (this may take some time)...
+Classification properties successfully evaluated.
+Generating classification mapping based on model-checking results...
+Results saved to `models/large-parametrized-models/[Apoptosis-network]-[41v]-[84p]-archive.zip`.
+
+real    2m2.860s
+user    1m58.704s
+sys     0m3.353s

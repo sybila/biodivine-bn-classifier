@@ -1,0 +1,11 @@
+Model path models/fully-specified-models//006.aeon
+Loaded model and properties out of `models/fully-specified-models//006.aeon`.
+Parsing formulae and generating symbolic representation...
+Successfully parsed all 0 required properties (assertions) and all 4 classification properties.
+Successfully encoded model with 68 variables and 0 parameters.
+Model admits 1 instances.
+Evaluating required properties (this may take some time)...
+Required properties successfully evaluated.
+1 instances satisfy all required properties.
+Evaluating classification properties (this may take some time)...
+Did not finish due to 1h timeout.

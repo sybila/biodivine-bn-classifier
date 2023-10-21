@@ -1,0 +1,11 @@
+Formula: 3{x}: (@{x}: (AX (~{x} & AF {x})))
+Time to model check: 174ms
+0 results in total
+0 unique colors
+0 unique states
+-----
+Model path all-models-inputs-true//027-inputs-true.aeon
+Loaded model with 26 variables.
+real 0.20
+user 0.19
+sys 0.01

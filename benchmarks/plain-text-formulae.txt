@@ -1,0 +1,11 @@
+# universally reachable steady states
+3{x}: V{y}: (@{y}: EF ({x} & (!{z}: AX {z})))
+
+# pair of steady states
+3{x}: 3{y}: ((@{x}: ~{y} & AX {x}) & (@{y}: AX {y}))
+
+# states allowing to reach 2 attractors
+3{x}: 3{y}: (@{x}: (EF ({y} & (!{z}: AX {z})) & EF (~{y} & (!{z}: AX {z}))))
+
+# "checkpoint" states
+3{x}: (@{x}: (AX (~{x} & AF {x})))

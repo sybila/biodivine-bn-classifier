@@ -1,0 +1,11 @@
+Formula: 3{x}: 3{y}: ((@{x}: ~{y} & AX {x}) & (@{y}: AX {y}))
+Time to model check: 372698ms
+0 results in total
+0 unique colors
+0 unique states
+-----
+Model path random-parametrizations/207//000010001100001001.aeon
+Loaded model with 103 variables.
+real 372.76
+user 344.78
+sys 27.93

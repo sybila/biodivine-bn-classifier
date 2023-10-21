@@ -1,0 +1,11 @@
+Formula: 3{x}: V{y}: (@{y}: EF ({x} & (!{z}: AX {z})))
+Time to model check: 1362469ms
+0 results in total
+0 unique colors
+0 unique states
+-----
+Model path all-models-inputs-true//160-inputs-true.aeon
+Loaded model with 92 variables.
+real 1362.54
+user 1355.60
+sys 6.52

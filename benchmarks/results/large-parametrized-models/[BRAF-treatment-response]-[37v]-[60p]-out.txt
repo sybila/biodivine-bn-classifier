@@ -1,0 +1,17 @@
+Model path models/large-parametrized-models/[BRAF-treatment-response]-[37v]-[60p].aeon
+Loaded model and properties out of `models/large-parametrized-models/[BRAF-treatment-response]-[37v]-[60p].aeon`.
+Parsing formulae and generating symbolic representation...
+Successfully parsed all 0 required properties (assertions) and all 4 classification properties.
+Successfully encoded model with 37 variables and 60 parameters.
+Model admits 18948168 instances.
+Evaluating required properties (this may take some time)...
+Required properties successfully evaluated.
+18948168 instances satisfy all required properties.
+Evaluating classification properties (this may take some time)...
+Classification properties successfully evaluated.
+Generating classification mapping based on model-checking results...
+Results saved to `models/large-parametrized-models/[BRAF-treatment-response]-[37v]-[60p]-archive.zip`.
+
+real    0m16.662s
+user    0m16.131s
+sys     0m0.310s

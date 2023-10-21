@@ -1,0 +1,17 @@
+Model path models/large-parametrized-models/[MAPK]-[18v]-[50p].aeon
+Loaded model and properties out of `models/large-parametrized-models/[MAPK]-[18v]-[50p].aeon`.
+Parsing formulae and generating symbolic representation...
+Successfully parsed all 0 required properties (assertions) and all 4 classification properties.
+Successfully encoded model with 18 variables and 50 parameters.
+Model admits 1125899906842624 instances.
+Evaluating required properties (this may take some time)...
+Required properties successfully evaluated.
+1125899906842624 instances satisfy all required properties.
+Evaluating classification properties (this may take some time)...
+Classification properties successfully evaluated.
+Generating classification mapping based on model-checking results...
+Results saved to `models/large-parametrized-models/[MAPK]-[18v]-[50p]-archive.zip`.
+
+real    0m5.651s
+user    0m5.400s
+sys     0m0.061s

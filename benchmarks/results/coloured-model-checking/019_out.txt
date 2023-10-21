@@ -1,0 +1,11 @@
+Model path models/parameter-scan/PSBNs//019.aeon
+Loaded model with 86 variables.
+Formula: 3{x}: 3{y}: ((@{x}: ~{y} & AX {x}) & (@{y}: AX {y}))
+Time to model check: 11936ms
+0 results in total
+0 unique colors
+0 unique states
+-----
+real 12.06
+user 11.82
+sys 0.23

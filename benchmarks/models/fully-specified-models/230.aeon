@@ -1,0 +1,144 @@
+
+# universally reachable steady states
+#! dynamic_property: p1: #`3{x}: V{y}: (@{y}: EF ({x} & (!{z}: AX {z})))`#
+
+# pair of steady states
+#! dynamic_property: p2: #`3{x}: 3{y}: ((@{x}: ~{y} & AX {x}) & (@{y}: AX {y}))`#
+
+# states allowing to reach 2 attractors
+#! dynamic_property: p3: #`3{x}: 3{y}: (@{x}: (EF ({y} & (!{z}: AX {z})) & EF (~{y} & (!{z}: AX {z}))))`#
+
+# "checkpoint" states
+#! dynamic_property: p4: #`3{x}: (@{x}: (AX (~{x} & AF {x})))`#
+
+x23 -? x1
+x32 -? x1
+x27 -? x2
+x5 -? x3
+x21 -? x3
+x24 -? x4
+x16 -? x5
+x21 -? x5
+x55 -? x5
+x5 -? x6
+x53 -? x6
+x4 -? x7
+x13 -? x8
+x15 -? x8
+x5 -? x9
+x17 -? x9
+x51 -? x9
+x34 -? x10
+x38 -? x10
+x9 -? x11
+x13 -? x12
+x27 -? x12
+x28 -? x13
+x13 -? x14
+x45 -? x15
+x3 -? x16
+x20 -? x17
+x20 -? x18
+x48 -? x18
+x19 -? x20
+x53 -? x20
+x31 -? x22
+x33 -? x23
+x34 -? x24
+x38 -? x24
+x7 -? x25
+x41 -? x25
+x22 -? x26
+x29 -? x27
+x42 -? x28
+x31 -? x29
+x26 -? x30
+x1 -? x31
+x41 -? x31
+x35 -? x32
+x17 -? x33
+x51 -? x33
+x33 -? x35
+x34 -? x35
+x39 -? x35
+x15 -? x36
+x4 -? x37
+x10 -? x37
+x6 -? x38
+x17 -? x38
+x1 -? x40
+x11 -? x41
+x37 -? x42
+x43 -? x42
+x44 -? x43
+x46 -? x43
+x17 -? x44
+x45 -? x44
+x5 -? x45
+x17 -? x45
+x20 -? x45
+x18 -? x46
+x20 -? x47
+x40 -? x47
+x20 -? x48
+x36 -? x49
+x25 -? x50
+x20 -? x51
+x27 -? x52
+x13 -? x54
+x3 -? x55
+$x1: (x32 & x23)
+$x2: x27
+$x3: (!x21 | x5)
+$x4: x24
+$x5: (x55 & (x16 & x21))
+$x6: (x5 & x53)
+$x7: x4
+$x8: (x15 & x13)
+$x9: (x17 | (x51 | x5))
+$x10: (x38 & x34)
+$x11: x9
+$x12: (x27 | x13)
+$x13: x28
+$x14: x13
+$x15: !x45
+$x16: !x3
+$x17: x20
+$x18: (x20 | x48)
+$x19: true
+$x20: (x19 & x53)
+$x21: true
+$x22: x31
+$x23: x33
+$x24: (x38 & x34)
+$x25: (x41 & x7)
+$x26: !x22
+$x27: x29
+$x28: x42
+$x29: x31
+$x30: !x26
+$x31: (x1 | x41)
+$x32: x35
+$x33: (x17 | x51)
+$x34: true
+$x35: (!x39 & (x33 & x34))
+$x36: x15
+$x37: (x10 & x4)
+$x38: (x17 | x6)
+$x39: true
+$x40: x1
+$x41: x11
+$x42: (x43 | x37)
+$x43: (!x44 & x46)
+$x44: (!x45 & x17)
+$x45: (x17 | (x20 | x5))
+$x46: x18
+$x47: (x40 | x20)
+$x48: x20
+$x49: x36
+$x50: !x25
+$x51: x20
+$x52: x27
+$x53: true
+$x54: x13
+$x55: !x3
