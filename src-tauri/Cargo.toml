@@ -13,9 +13,9 @@ rust-version = "1.72"
 tauri-build = { version = "1.2.1", features = [] }
 
 [dependencies]
-biodivine-lib-bdd = ">=0.5.1, <1.0.0"
-biodivine-lib-param-bn = ">=0.4.5, <1.0.0"
-biodivine-hctl-model-checker = "0.2.0"
+biodivine-lib-bdd = "=0.5.2"
+biodivine-lib-param-bn = "=0.4.7"
+biodivine-hctl-model-checker = "=0.2.0"
 
 rand = "0.8.5"
 clap = { version = "4.1.4", features = ["derive"] }
