@@ -1,11 +1,12 @@
 //! Tool for symbolic classification of BN models based on dynamic properties.
 //!
-//! Takes a path to a model in `.aeon` format containing a partially defined BN model and
-//! two sets of HCTL formulae: assertions that must be satisfied, and properties that are
-//! used for classification. All formulae are given in a form of model annotations.
+//! Takes a path to a model in `.aeon` format containing a partially specified BN model and
+//! two sets of HCTL formulae: required properties (assertions) that must be satisfied,
+//! and classification properties that are used for classification. All formulae are given
+//! in a form of model annotations.
 //!
 //! First, conjunction of assertions is model-checked, and then the set of remaining colors is
-//! decomposed into categories based on the properties they satisfy.
+//! decomposed into categories based on the classification properties they satisfy.
 //!
 
 pub mod classification;
@@ -21,7 +22,8 @@ use std::time::SystemTime;
 #[derive(Parser)]
 #[clap(about = "Symbolic classifier for BN models based on dynamic properties.")]
 struct Arguments {
-    /// Path to a file in annotated `aeon` format containing a BN model and 2 sets of HCTL formulae.
+    /// Path to a file in annotated `aeon` format containing a PSBN model and 2 sets
+    /// of HCTL formulae.
     input_path: String,
 
     /// Path to a zip archive to which a report and BDD results will be dumped.
@@ -45,7 +47,7 @@ fn main() {
         return;
     }
 
-    let classification_res = classify(output_name.as_str(), input_path.as_str());
+    let classification_res = classify(input_path.as_str(), output_name.as_str());
 
     if classification_res.is_err() {
         println!(

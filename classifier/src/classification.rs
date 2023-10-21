@@ -1,7 +1,7 @@
 //! Main high-level functionality regarding the BN classification based on HCTL properties.
 
 use crate::load_inputs::*;
-use crate::write_output::{write_class_report_and_dump_bdds, write_empty_report};
+use crate::write_output::{write_classifier_output, write_empty_report};
 
 use biodivine_hctl_model_checker::mc_utils::{
     collect_unique_hctl_vars, get_extended_symbolic_graph,
@@ -44,24 +44,30 @@ fn get_universal_colors(
 /// of properties is satisfied (universally).
 ///
 /// Report and BDDs representing resulting classes are generated into `output_zip` archive.
-pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
+pub fn classify(model_path: &str, output_zip: &str) -> Result<(), String> {
     // TODO: allow caching between model-checking assertions and properties somehow
 
     // load the model and two sets of formulae (from model annotations)
-    let Ok(aeon_str) = std::fs::read_to_string(input_path) else {
-        return Err(format!("Input file `{input_path}` is not accessible."));
+    let Ok(aeon_str) = std::fs::read_to_string(model_path) else {
+        return Err(format!("Input file `{model_path}` is not accessible."));
     };
     let bn = BooleanNetwork::try_from(aeon_str.as_str())?;
     let annotations = ModelAnnotation::from_model_string(aeon_str.as_str());
     let assertions = read_model_assertions(&annotations);
     let named_properties = read_model_properties(&annotations)?;
-    println!("Loaded all inputs.");
+    println!("Loaded model and properties out of `{model_path}`.");
 
-    println!("Parsing formulae and generating model representation...");
+    println!("Parsing formulae and generating symbolic representation...");
     // Combine all assertions into one formula and add it to the list of properties.
     let assertion = build_combined_assertion(&assertions);
+    // Adjust message depending on the number of properties (singular/multiple)
+    let assertion_message = if assertions.len() == 1 {
+        "property (assertion)"
+    } else {
+        "properties (assertions)"
+    };
     println!(
-        "Successfully parsed {} assertions and {} properties.",
+        "Successfully parsed all {} required {assertion_message} and all {} classification properties.",
         assertions.len(),
         named_properties.len(),
     );
@@ -79,30 +85,30 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
 
     // Instantiate extended STG with enough variables to evaluate all formulae.
     let Ok(graph) = get_extended_symbolic_graph(&bn, num_hctl_vars as u16) else {
-        return Err("Unable to generate STG for provided BN model.".to_string());
+        return Err("Unable to generate STG for provided PSBN model.".to_string());
     };
     println!(
-        "Successfully generated model with {} vars and {} params.",
+        "Successfully encoded model with {} variables and {} parameters.",
         graph.symbolic_context().num_state_variables(),
         graph.symbolic_context().num_parameter_variables(),
     );
     println!(
-        "Model admits {:.0} parametrisations.",
+        "Model admits {:.0} instances.",
         graph.mk_unit_colors().approx_cardinality(),
     );
 
-    println!("Evaluating assertions...");
+    println!("Evaluating required properties (this may take some time)...");
     // Compute the colors (universally) satisfying the combined assertion formula.
     let assertion_result = model_check_tree_dirty(assertion_tree, &graph)?;
     let valid_colors = get_universal_colors(&graph, &assertion_result);
-    println!("Assertions evaluated.");
+    println!("Required properties successfully evaluated.");
     println!(
-        "{:.0} parametrisations satisfy all assertions.",
+        "{:.0} instances satisfy all required properties.",
         valid_colors.approx_cardinality(),
     );
 
     if valid_colors.is_empty() {
-        println!("No color satisfies given assertions. Aborting.");
+        println!("No instance satisfies given required properties. Aborting.");
         return write_empty_report(&assertions, output_zip).map_err(|e| format!("{e:?}"));
     }
 
@@ -113,13 +119,14 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
         valid_colors.as_bdd().clone(),
     )?;
 
-    println!("Evaluating properties...");
+    println!("Evaluating classification properties (this may take some time)...");
     // Model check all properties on the restricted graph.
     let property_result = model_check_multiple_trees_dirty(property_trees, &graph)?;
     let property_colors: Vec<GraphColors> = property_result
         .iter()
         .map(|result| get_universal_colors(&graph, result))
         .collect();
+    println!("Classification properties successfully evaluated.");
 
     // This is an important step where we ensure that the "model checking context"
     // does not "leak" outside of the BN classifier. In essence, this ensures that the
@@ -133,17 +140,17 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
         .collect();
 
     // do the classification while printing the report and dumping resulting BDDs
-    println!("Classifying based on model-checking results...");
-    write_class_report_and_dump_bdds(
+    println!("Generating classification mapping based on model-checking results...");
+    write_classifier_output(
         &assertions,
-        valid_colors,
+        &valid_colors,
         &named_properties,
         &property_colors,
         output_zip,
         aeon_str.as_str(),
     )
     .map_err(|e| format!("{e:?}"))?;
-    println!("Results saved to {output_zip}.");
+    println!("Results saved to `{output_zip}`.");
 
     Ok(())
 }
@@ -151,7 +158,7 @@ pub fn classify(output_zip: &str, input_path: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use crate::classification::{
-        build_combined_assertion, extract_properties, read_model_assertions, read_model_properties,
+        build_combined_assertion, read_model_assertions, read_model_properties,
     };
     use biodivine_hctl_model_checker::mc_utils::collect_unique_hctl_vars;
     use biodivine_hctl_model_checker::preprocessing::parser::parse_and_minimize_hctl_formula;
@@ -249,19 +256,6 @@ mod tests {
         assert_eq!(
             props.err().unwrap().as_str(),
             "Found multiple properties named `p1`."
-        );
-    }
-
-    #[test]
-    /// Test extracting properties from name-property pairs.
-    fn test_extract_properties() {
-        let named_props = vec![
-            ("p1".to_string(), "true".to_string()),
-            ("p2".to_string(), "false".to_string()),
-        ];
-        assert_eq!(
-            extract_properties(&named_props),
-            vec!["true".to_string(), "false".to_string()]
         );
     }
 }
