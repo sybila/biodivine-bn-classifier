@@ -421,7 +421,7 @@ let CytoscapeEditor = {
   					'selector': 'node[type = "leaf"]',
   					'style': {  						
   						'border-color': '#546E7A',
-  						'font-size': '16pt',
+  						'font-size': '14pt',
   					}  					
   				},
   				{
