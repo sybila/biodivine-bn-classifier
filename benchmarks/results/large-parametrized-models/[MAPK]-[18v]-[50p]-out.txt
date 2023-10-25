@@ -12,6 +12,6 @@ Classification properties successfully evaluated.
 Generating classification mapping based on model-checking results...
 Results saved to `models/large-parametrized-models/[MAPK]-[18v]-[50p]-archive.zip`.
 
-real    0m5.651s
-user    0m5.400s
-sys     0m0.061s
+real    0m11.812s
+user    0m9.779s
+sys     0m0.288s

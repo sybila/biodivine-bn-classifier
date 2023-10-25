@@ -1,0 +1,37 @@
+
+# universally reachable steady states
+#! dynamic_property: p1: #`3{x}: V{y}: (@{y}: EF ({x} & (!{z}: AX {z})))`#
+
+# pair of steady states
+#! dynamic_property: p2: #`3{x}: 3{y}: ((@{x}: ~{y} & AX {x}) & (@{y}: AX {y}))`#
+
+# states allowing to reach 2 attractors
+#! dynamic_property: p3: #`3{x}: 3{y}: (@{x}: (EF ({y} & (!{z}: AX {z})) & EF (~{y} & (!{z}: AX {z}))))`#
+
+# "checkpoint" states
+#! dynamic_property: p4: #`3{x}: (@{x}: (AX (~{x} & AF {x})))`#
+
+x6 -| x1
+x2 -> x3
+x2 -> x4
+x3 -> x4
+x1 -| x6
+x2 -> x6
+x3 -| x6
+x4 -| x6
+x6 -> x6
+x7 -> x6
+x5 -| x6
+x1 -| x7
+x2 -> x7
+x3 -| x7
+x4 -| x7
+x6 -> x7
+x5 -| x7
+$x1: !x6
+$x2: true
+$x3: x2
+$x4: (x2 & x3)
+$x5: true
+$x6: ((((((((((((((!x1 & !x2) & x6) & x7) | ((!x1 & x2) & !x3)) | (((!x1 & x2) & x3) & !x4)) | (((((!x1 & x2) & x3) & x4) & x6) & x7)) | (((x1 & !x2) & x6) & x7)) | ((((x1 & x2) & !x3) & !x6) & !x5)) | (((((x1 & x2) & !x3) & x6) & !x7) & !x5)) | ((((x1 & x2) & !x3) & x6) & x7)) | (((((x1 & x2) & x3) & !x4) & !x6) & !x5)) | ((((((x1 & x2) & x3) & !x4) & x6) & !x7) & !x5)) | (((((x1 & x2) & x3) & !x4) & x6) & x7)) | (((((x1 & x2) & x3) & x4) & x6) & x7))
+$x7: (((((!x1 & x2) & !x3) & x6) & !x5) | (((((!x1 & x2) & x3) & !x4) & x6) & !x5))
