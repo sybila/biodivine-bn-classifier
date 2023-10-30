@@ -23,6 +23,17 @@ not the case, please substitute them for the full path to the downloaded binary.
 
 ## Using BN Classifier
 
+#### Manual
+
+In the `manual.pdf`, we provide detailed instructions on 
+- installation,
+- input format,
+- running the classification engine,
+- running the GUI (with illustrations).
+
+Below, we summarize some of the functionality.
+
+
 #### Input model and properties
 
 The input for the analysis is an [AEON model](https://biodivine.fi.muni.cz/aeon) annotated with HCTL formulas.
@@ -97,14 +108,47 @@ For any leaf node, you can save a canonical witness Boolean network (i.e.
 a network with all parameters set to a fixed value). You can also randomly
 sample the space of networks that appear in this leaf node.
 
-#### Example
+#### Simple example
 
 To run the prepared example, execute the following commands:
 
 ```
-bn-classifier --output-zip example-result.zip ./benchmarks/mapk/model-with-properties.aeon
+bn-classifier --output-zip example-result.zip ./tutorial/case-study-mapk/mapk-annotated.aeon
 hctl-explorer ./example-result.zip
 ```
+
+## Tutorial and Benchmarks
+
+We provide a tutorial and a set of benchmarks to experiment with. Both of them utilize the Python bindings to the Rust code of the classification engine. These are provided as part of our standard library [aeon.py](https://github.com/sybila/biodivine-aeon-py/).
+
+Follow the instructions below to 1) install all dependencies and 2) run the tutorial or execute benchmarks.
+
+#### Creating the Python `venv` and installing dependecies
+
+First, we create a Python virtual environment. For this, we assume you have Python 3 installed with support for virtual environments (current minimal supported version is Python 3.9). For example, on debian-based linux, this corresponds to system packages `python3`, `python3-pip` and `python3-venv` (i.e. `sudo apt install python3 python3-pip python3-venv`).
+
+Then run the following to create a fresh Python environment with all the dependencies:
+1. `python3 -m venv ./env` to create a new blank environment in the `env` folder.
+2. Next, run `source ./env/bin/activate` to activate the environment. 
+3. Finally, run `pip3 install -r requirements.txt` to install all the relevant dependencies.
+
+You will need to have this environment active to run both the benchmarks and tutorial (just run `source ./env/bin/activate` in correct directory to enable the virtual environment). To deactivate the environment, simply execute the `deactivate` command.
+
+
+#### Running the tutorial notebook
+
+To open the jupyter notebook environment: `python3 -m jupyter notebook --no-browser`
+
+This should start a jupyter notebook environment that you can access through the web browser. You need to find a "Or copy and paste one of these URLs:" message. Then copy the URL under this message and paste it into a browser window (Firefox is installed in the VM). The URL should look like this: `http://localhost:8888/tree?token=SOME_RANDOM_STRING_OF_CHARACTERS`. This will open a jupyter notebook user interface. You can keep this window open, because it will be used in the tutorial.
+
+Navigate to the `tutorial` folder and open the `tutorial.ipynb`  notebook. The notebook contains all the relevant instructions on how to use *BN Classifier* as a Python library as well as the explorer GUI.  
+
+>  If you are unfamiliar with Jupyter notebooks, you can execute a code cell by selecting it and pressing `Shift+Enter`. Alternatively, you can also press the "run" button in the top toolbar (using the "play" arrow icon).
+
+#### Running the benchmarks
+
+All the details regarding the benchmarking process, the models we use, and pre-computed results are provided in `./benchmarks/README.md`.
+
 
 ## Development guide
 

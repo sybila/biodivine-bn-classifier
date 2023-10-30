@@ -1,22 +1,23 @@
 # BN Classifier Benchmarks
 
-This repository is configured to allow painless running of non-trivial benchmarks of the tools `classification` engine and its `model-checking` component (as described in Section 6.2 and 6.3 of the paper). If you want to replicate the results of the case study, follow the provided `tutorial` (as instructed in the main readme).
+This repository is configured to allow painless running of non-trivial benchmarks of the tool's `classification` engine and its `model-checking` component (as described in Section 6.2 and 6.3 of the paper). If you want to replicate the results of the case study, follow the provided `tutorial` (as instructed in the main readme).
 
 This README contains the following (in this order):
 - description of provided sets of benchmark models
 - description of provided precomputed results
 - description of provided benchmarking scripts
-- instructions on how to execute the large prepared benchmark sets
-- instructions on how to run (quick) experiments on selected models
+- instructions on how to execute prepared sets of experiments - both full version and reduced version
+- instructions on how to run (quick) experiments on individual models
 
 ## Benchmark models
 
 All benchmark models are present in the `models` directory. They are all originally taken from [BBM repository](https://github.com/sybila/biodivine-boolean-models).
 
 - `fully-specified-models` folder contains all 230 fully specified models that we used to evaluate the tool's performance in Section 6.2 of the paper
-- `fully-specified-models-subset` contains a subset of 100 models (out of 230 of the `fully-specified-models`) that we selected to allow for a "swift" evalution (on this subset, all relevant experiments take less than 10 minutes in total - compared to tens of hours when using all 230 models - more on this later)
+- `fully-specified-models-subset` contains a subset of 100 models (out of 230 of the `fully-specified-models`) that we selected as part of a "reduced" evalution (on this subset, all relevant experiments take less than 10 minutes in total - compared to tens of hours when using all 230 models - more on this later)
 - `parameter-scan` folder contains all models related to our parameter scan experiments in Section 6.3 of the paper
     - `PSBNs` sub-folder contains the seven selected PSBNs (that we run the coloured model checking on)
+    - `PSBNs-subset` sub-folder contains the subset of five PSBNs selected as part of a "reduced" evalution (with fastest computation times and lowest memory requirements)
     - other seven sub-folders each contain the 1024 sampled instances for one of the selected PSBN models (that we use to estimate the parameter scan time)
 - `large-parametrized-models` folder contains PSBN models involving function symbols of higher arity (that we mention in the end of Section 6.3 of the paper)
 
@@ -27,20 +28,23 @@ All the results of our experiments are present in the `results` directory.
 - `classification` folder contains results of classification on models from `models/fully-specified-models` (as discussed in Section 6.2 of the paper)
 - `model-checking` folder contains the model-checking results on models from `models/fully-specified-models`, one sub-folder for each of the four formulae (also discussed in Section 6.2)
 - `coloured-model-checking` contains results of the coloured model checking on seven selected PSBNs from `models/parameter-scan/PSBNs` (as discussed in Section 6.3 of the paper)
-- `parameter-scan` contains results of the parameter scan for all 7 selected models in `models/parameter-scan/*` (as discussed in Section 6.3 of the paper)
+- `parameter-scan` contains results of the parameter scan experiments for all 7 selected models in `models/parameter-scan/*` (as discussed in Section 6.3 of the paper)
 - `large-parametrized-models` contains results of classification on models from `models/large-parametrized-models` (as mentioned in the end of Section 6.3 of the paper)
 
-Classification results for each model consists of `*_out.txt` with command line output (computation time + progress summary) and `*-archive.zip` with the resulting classification archive.
-Model-checking results for each model consist of `*_out.txt` command line output (computation time + short summary of model-checking results). 
+Classification results for each model consist of `*_out.txt` file with command line output (progress summary, computation time) and `*-archive.zip` with the resulting classification archive.
+Model-checking results for each model consist of `*_out.txt` command line output (computation time + short summary of model-checking results). If a process did not finish due to timeout or shortage of memory, it is also mentioned so in the corresponding `*_out.txt` file.
 
-#### Resources 
-Note that we have run all the experiments on on a workstation with a 32-core AMD Threadripper 2990WX CPU and 64GB of RAM. Every experiment was executed in a separate process, and its runtime was measured using the standard UNIX time utility. Due to the high number of considered experiments, we typically executed up to 16 benchmarks in parallel to speed up the evaluation. This is because, in our experience, the memory bandwidth of this particular CPU does not scale sufficiently to all 32 cores for the considered workloads (symbolic algorithms typically perform a lot of sequential random memory accesses, resulting in contention among cores). For each benchmark instance, we consider a timeout of one hour.
+Moreover, the `classification` results, all four `model-checking` results, and `parameter-scan` results also include two summary `.csv` files produced by the runner script. The `*_times.csv` contains computation time for each model (regarding the particular experiment set), and `*_aggregated.csv` contains data regarding how many instances finished before certain times. 
 
-If an experiment successfully finished in one hour, the corresponding `*_out.txt` contains (besides other things) the computation time. If the process did not finish due to timeout or out-of-memory, it is also mentioned so in the `*_out.txt` file. For results of the large benchmark sets, there also two `.csv` files with aggregated results, as produced by the runner script.
+The plot in Section 6.2 of the paper was made using data in five `*_aggregated.csv` summary files from the `classification` folder and the four `model-checking` sub-folders. The table in Section 6.3 of the paper uses (i) times of `coloured-model-checking` experiments, and (ii) times of `parameter-scan` (transformed using the methodology described in the paper to make an estimate).
 
-> Note that the computation times on the `TACAS23 VM` might be a bit higher.
+> Note that the computation times on the `TACAS23 VM` might be higher.
 
 ## Benchmark scripts 
+
+Scripts `run-benchmarks-all.sh` and `run-benchmarks-subset.sh` allow to execute the benchmarks via a single command.
+Internally, they call the "runner" script (see below) on particular sets of models. 
+In the next section (`Executing prepared benchmarks`), we describe the particular experiments they involve.
 
 The `run.py` script ("runner") makes it possible to run a particular Python script for each model ("experiment") in a directory (e.g. `fully-specified-models`). The runner then ensures that each experiment runs within a specified timeout, that the runtime is measured, and that the output is saved to a separate file.
 
@@ -63,7 +67,7 @@ python3 run.py TIMEOUT BENCH_DIR SCRIPT [-i/-p N]
 
 > WARNING: The script does not respond particularly well to keyboard interrupts. If you kill the benchmark runner (e.g. `Ctrl+C`), you may also need to terminate some unfinished experiments manually.
 
-> ANOTHER WARNING: For some reason, not all exit codes are always propagated correctly through the whole `python <-> timeout <-> time <-> python` chain. For this reason, benchmarks that run out of memory can still result in a "successful" measurement (successful in the sense that it finished before timeout). For this reason, always run `helper-scripts/postprocess-results-mc.py` or `helper-scripts/postprocess-results-classif.py` (depending on what benchmark script you ran) on the directory with results.
+> ANOTHER WARNING: For some reason, not all exit codes are always propagated correctly through the whole `python <-> timeout <-> time <-> python` chain. For this reason, benchmarks that run out of memory can still result in a "successful" measurement (successful in the sense that it finished before timeout). For this reason, always run `python3 helper-scripts/postprocess-mc.py <RESULTS_DIR>` on directories with model-checking results and `python3 helper-scripts/postprocess-classif.py <RESULTS_DIR>` on directories with classification results.
 
 We provide the following scripts to execute via the runner
 - `model-checking-p1.py` to evaluate formula p1 (phi1) on a model
@@ -72,24 +76,69 @@ We provide the following scripts to execute via the runner
 - `model-checking-p4.py` to evaluate formula p4 (phi4) on a model
 - `classification.py` to run the whole classification process on an annotated model
 
-## Executing prepared benchmarks
+## Executing prepared benchmark sets
 
-There are several pre-configured benchmark commands that you can use. Of course, you can add `-p N` or `-i` to each command involving the runner script to run it in parallel or interactive mode.
+> Always make sure that the provided Python virtual environment (in the `artefact` directory) is active before executing the experiments. Execute all the commands listed below from the `benchmarks` directory.
 
-Note that executing the full performance benchmarks and parameter scan benchmarks might take a long time (up to several days), because it involves hundreds (thousands) of models.
+### Executing benchmark sets via a single script
 
-> Always make sure that the provided Python virtual environment is active before executing the experiments. Execute all the commands from `benchmarks` directory.
+We have prepared two versions of a script to run (A) a partial version or (B) a full version of our experiments.
+The partial version involves a subset of models with fastest computation times (as discussed below).
+
+Both scripts list the progress on the standard CLI output. That usually involves a message when a new benchmark instance is started/finished being processed. Simultaneously, the scripts produce the results on the fly.
+The relevant raw results for each group of benchmarks (e.g., for a classification on fully specified models, or for each parameter scan) will gradually appear in separate `_run_*` sub-directories inside the `benchmarks` directory. For example, the results of a parameter scan on the model `077` will appear in a sub-directory with prefix `_run_models_parameter-scan_077_model-checking-p2`. The name reflects the folder with correponding models and the procedure we evaluate (in this case, model checking of phi2). Each `_run_*` directory will contain:
+- `*_out.txt` files for each processed model, with a computation time and short progress summary (appears immediately when a model is evaluated). Each classification summary contains a path to a corresponding results archive.
+- `*_times.csv` file with a summary of computation times for all benchmark instances finished so far (updated on the fly)
+- `*_agreggated.csv` file with a summary regarding how many benchmark instances finished before certain times (updated after all instances of the set are finished)
+
+> To make sure that all unsuccessful benchmark instances are correctly discarded from the result summaries, you can run `python3 benchmarks/helper-scripts/postprocess-mc.py <RESULTS_DIR_PATH>` on directories with model-checking results and `python3 benchmarks/helper-scripts/postprocess-classif.py <RESULTS_DIR_PATH>` on directories with classification results.
+
+#### A) Executing reduced benchmarks
+The partial version involves:
+- model-checking (for all 4 formulae) and classification benchmarks on a subset of 100 (out of 230) fully specified models with fastest computation times
+- parameter scan experiments for the model `077`
+- coloured model checking for a subset of 5 (out of 7) PSBN models with fastest computation times and lowest memory requirements
+- classification experiments on 5 PSBNs models involving higher arity function symbols
+
+To run the partial benchmarks, execute the following commands from the `benchmarks` directory. This script is expected to take `1 hour` to successfully finish on the `TACAS'23 VM` with 8GB of RAM.
+```
+bash run-benchmarks-subset.sh
+```
+
+This script is expected to take less than `1H` to finish on the `TACAS'23 VM`. It does not rely on parallel execution.
+
+#### B) Executing full benchmarks
+The full benchmark version involves:
+- model-checking (for all 4 formulae) and classification benchmarks on all 230 fully specified models
+- parameter scan experiments for each of the selected 7 PSBN models
+- coloured model checking for each of the selected 7 PSBN models
+- classification experiments on 5 PSBNs models involving higher arity function symbols
+
+To run the full benchmarks, execute the following commands from the `benchmarks` directory. This script sequentially runs thousands of benchmark instances, and it is thus expected to take up to 20 days in total to finish (but the results are produced on the fly). Also note that some of the benchmarks may require up to 64GB of RAM. 
+```
+bash run-benchmarks-all.sh
+```
+
+You can use `run-benchmarks-all-parallel.sh` instead to speed up the computation by changing the value of `PARALLEL_INSTANCES` at the top (but don't use more processes than there are cores).
+However, the parallelism may result in some benchmarks failing to finish due to not enough memory being available.
+
+
+### Executing benchmark sub-sets one by one
+
+There are several pre-configured benchmark commands that you can use to run the benchmarks for only selected sets of models. You can add `-p N` or `-i` to each command involving the runner script to run it in parallel or interactive mode. However, the parallelism may result in some benchmarks failing to finish due to not enough memory being available.
+
+> Note that the computation times on the `TACAS'23 VM` might sometimes be higher than the expected times we list.
 
 #### Benchmarking on fully specified models
-You can choose on which set of fully specified models to run the experiments. Experiments with the full benchmark set may take up to tens of hours (without parallelism). This is often caused due to 1H timeouts. The selected 100 model subset contains the benchmarks with fastest computation times, that were tested on `TACAS23 VM`. The total computation times (without parallelism) are summarized by the table:
+You can choose on which set of fully specified models to run the experiments. Experiments with the full benchmark set may take up to tens of hours (without parallelism). This is often caused due to 1H timeouts. The selected 100 model subset contains the benchmarks with fastest computation times that were tested on `TACAS23 VM` with 8GB of RAM. The total computation times (without parallelism) are summarized by the table:
 
 | experiment | time 230 models | time 100 models |
 | -------- | ------- | ------- |
 | model checking phi1 | 14H | 15s |
 | model checking phi2 | 29H | 20s |
-| model checking phi3 | 14H | 15s |
-| model checking phi4 | 93H | 4min |
-| classification | 94H | 4min |
+| model checking phi3 | 14.5H | 15s |
+| model checking phi4 | 94H | 4min |
+| classification | 94.5H | 4min |
 
 
 If you choose to run the benchmark experiments on all 230 models, use the following commands:
@@ -118,17 +167,17 @@ python3 run.py 1h models/fully-specified-models-subset classification.py
 
 
 #### Parameter scan benchmarks
-Expected times for running parameter scan experiments are given in the table below (without parallelism). The high runtimes are because we are evaluating 1024 instances for each model. To just quickly test a subset, run the experiments for model `132`.
+Expected times for running parameter scan experiments are given in the table below (without parallelism). The high runtimes are because we are evaluating 1024 instances for each model. To just quickly test a subset, run the experiments for model `077`.
 
 | model | time |
 | -------- | ------- |
 | 018 | 19H |
-| 019 | 5H |
+| 019 | 4.5H |
 | 056 | 37H | 
-| 077 | 93H | 
-| 132 | 3min |
+| 077 | 3min | 
+| 132 | 9H |
 | 137 | 17H |
-| 207 | 100H |
+| 207 | 101H |
 
 To run the prepared parameter scan benchmarks, choose model `ID`, substitute it in the command, and execute:
 
@@ -152,7 +201,7 @@ To run the prepared benchmarks for PSBN models with higher-arity function symbol
 python3 run.py 1h models/large-parametrized-models classification.py
 ```
 
-## Running experiments on selected models
+## Running single experiments on selected models
 
 You can also directly execute scripts `classification.py` or `model-checking.py` on selected models to run single experiments. To construct own formulae, choose from the ones provided in plaintext in `plain-text-formulae.txt` or see the tool's Manual.
 
@@ -161,7 +210,7 @@ python3 classification.py MODEL_PATH
 python3 model-checking.py MODEL_PATH --formula HCTL_FORMULA
 ```
 
-In particular, the following experiments should all successfully finish in `under 1 minute` when run on a `TACAS 23 VM`:
+In particular, the following experiments should all successfully finish in `under 1 minute` when run on a `TACAS'23 VM` with 8GB of RAM:
 
 1) model checking and classification experiments on fully specified model `206` with 41 variables
 ```
