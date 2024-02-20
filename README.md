@@ -31,13 +31,13 @@ In the `manual.pdf`, we provide detailed instructions on
 - running the classification engine,
 - running the GUI (with illustrations).
 
-Below, we summarize some of the functionality.
+Below, we briefly summarize some of the functionality.
 
 
 #### Input model and properties
 
 The input for the analysis is an [AEON model](https://biodivine.fi.muni.cz/aeon) annotated with HCTL formulas.
-The details of the HCTL syntax can be found [here](https://github.com/sybila/biodivine-hctl-model-checker).
+The details of the HCTL syntax can be found in the `manual.pdf`.
 To get familar with AEON models, we recommend [this page](https://biodivine.fi.muni.cz/aeon/manual/v0.4.0/model_editor/import_export.html) 
 of the AEON manual. A wide range of real-world models for testing can be also found 
 [here](https://github.com/sybila/biodivine-boolean-models) (however, these models do not contain any HCTL formulas).
