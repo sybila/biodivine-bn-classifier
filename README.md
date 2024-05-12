@@ -42,12 +42,13 @@ To get familar with AEON models, we recommend [this page](https://biodivine.fi.m
 of the AEON manual. A wide range of real-world models for testing can be also found 
 [here](https://github.com/sybila/biodivine-boolean-models) (however, these models do not contain any HCTL formulas).
 
-Each HCTL formula represents either an *assertion*, or a *named property*. The assertions restrict the space of
-possible network parametrisations: the tool will disregard any parametrisation that does not satisfy all
-assertions (formula satisfaction is *universal*, i.e. in order to be satisfied, it must be satisfied in all states). 
+Each HCTL formula represents either an *assertion* or a named *classification property*. 
+The assertions restrict the space of possible network parametrisations: the tool will disregard any parametrisation 
+that does not satisfy all assertions (formula satisfaction is *universal*, i.e. in order to be satisfied, it must be 
+satisfied in all states). 
 Meanwhile, properties are used for the classification step. Here, the tool will enumerate unique 
 groups of properties that can hold together and the parametrisations where this occurs (again, a formula holds if 
-it holds in all states). The relationships between these groups can be then explored through the decision 
+it holds in all states). The relationships between these groups can then be explored through the decision 
 tree visualization tool.
 
 Below, we show a simple example of how to include assertions and properties in a model file (we intentionally
@@ -55,24 +56,24 @@ limit the use of hybrid operators to simplify the example). You can find  additi
 hybrid assertions and properties in complex models in the `benchmarks` directory. 
 
 ```
-# This property states that every state must be able to reach a state where
+# This assertion states that every state must be able to reach a state where
 # variable `Apoptosis` is true. `#!` is used to start a "comment annotation"
-# The #` and `# serve as opening/closing escape characters for the HCTL formula.
+# The #` and `# serves as opening/closing escape characters for the HCTL formula.
 #! dynamic_assertion: #`EF Apoptosis`#
 
-# This property states that there must be a state in which `Apoptosis`
-# holds, and this state is a fixed-point.
+# This assertion states that there must be a state in which `Apoptosis`
+# holds, and this state is a fixed point.
 #! dynamic_assertion: #`3{x}: @{x}: (Apoptosis & AX x)`#
 
 # Consequently, the classification step will only consider parametrisations
 # that satisfy the two assertions. To further disambiguate between 
-# parametrisations, we can define named properties:
+# parametrisations, we can define named classification properties:
 
 # Property `will_die` states that the system will always eventually reach `Apoptosis`.
 #! dynamic_property: will_die: #`AF AG Apoptosis`#
 
 # Property `cannot_be_undead` states that whenever `Apoptosis` is true, it must
-# stay true forver.
+# stay true forever.
 #! dynamic_property: cannot_be_undead: #`Apoptosis => AG Apoptosis`#
 ```
 
@@ -82,7 +83,7 @@ Once you have an `annotated-model.aeon` file, you can run the classification eng
 
 `bn-classifier --output-zip /path/to/output-archive.zip path/to/annotated-model.aeon`
 
-The output is written into the `output-archive.zip` which contains both a plaintext
+The output is written into the `output-archive.zip`, which contains both a plaintext
 `report.txt` where you can see a summary of the results, as well as raw BDD dumps
 (compatible with the [lib-bdd](https://github.com/sybila/biodivine-lib-bdd) string 
 representation) that can be imported into the `hctl-explorer`.
@@ -119,29 +120,29 @@ hctl-explorer ./example-result.zip
 
 ## Tutorial and Benchmarks
 
-We provide a tutorial and a set of benchmarks to experiment with. Both of them utilize the Python bindings to the Rust code of the classification engine. These are provided as part of our standard library [aeon.py](https://github.com/sybila/biodivine-aeon-py/).
+We provide a tutorial and a set of benchmarks with which to experiment. Both of them utilize the Python bindings to the Rust code of the classification engine. These are provided as part of our standard library [aeon.py](https://github.com/sybila/biodivine-aeon-py/).
 
 Follow the instructions below to 1) install all dependencies and 2) run the tutorial or execute benchmarks.
 
-#### Creating the Python `venv` and installing dependecies
+#### Creating the Python `venv` and installing dependencies
 
-First, we create a Python virtual environment. For this, we assume you have Python 3 installed with support for virtual environments (current minimal supported version is Python 3.9). For example, on debian-based linux, this corresponds to system packages `python3`, `python3-pip` and `python3-venv` (i.e. `sudo apt install python3 python3-pip python3-venv`).
+First, we create a Python virtual environment. For this, we assume you have Python 3 installed with support for virtual environments (the current minimal supported version is Python 3.9). For example, on Debian-based Linux, this corresponds to system packages `python3`, `python3-pip` and `python3-venv` (i.e. `sudo apt install python3 python3-pip python3-venv`).
 
 Then run the following to create a fresh Python environment with all the dependencies:
 1. `python3 -m venv ./env` to create a new blank environment in the `env` folder.
 2. Next, run `source ./env/bin/activate` to activate the environment. 
 3. Finally, run `pip3 install -r requirements.txt` to install all the relevant dependencies.
 
-You will need to have this environment active to run both the benchmarks and tutorial (just run `source ./env/bin/activate` in correct directory to enable the virtual environment). To deactivate the environment, simply execute the `deactivate` command.
+You will need to have this environment active to run both the benchmarks and tutorial (just run `source ./env/bin/activate` in the correct directory to enable the virtual environment). To deactivate the environment, simply execute the `deactivate` command.
 
 
 #### Running the tutorial notebook
 
 To open the jupyter notebook environment: `python3 -m jupyter notebook --no-browser`
 
-This should start a jupyter notebook environment that you can access through the web browser. You need to find a "Or copy and paste one of these URLs:" message. Then copy the URL under this message and paste it into a browser window (Firefox is installed in the VM). The URL should look like this: `http://localhost:8888/tree?token=SOME_RANDOM_STRING_OF_CHARACTERS`. This will open a jupyter notebook user interface. You can keep this window open, because it will be used in the tutorial.
+This should start a Jupyter notebook environment that you can access through the web browser. You need to find a "Or copy and paste one of these URLs:" message. Then, copy the URL under this message and paste it into a browser window (Firefox is installed in the VM). The URL should look like this: `http://localhost:8888/tree?token=SOME_RANDOM_STRING_OF_CHARACTERS`. This will open a Jupyter notebook user interface. You can keep this window open, because it will be used in the tutorial.
 
-Navigate to the `tutorial` folder and open the `tutorial.ipynb`  notebook. The notebook contains all the relevant instructions on how to use *BN Classifier* as a Python library as well as the explorer GUI.  
+Navigate to the `tutorial` folder and open the `tutorial.ipynb`  notebook. The notebook contains all the relevant instructions on how to use *BN Classifier* as a Python library, as well as the explorer GUI.  
 
 >  If you are unfamiliar with Jupyter notebooks, you can execute a code cell by selecting it and pressing `Shift+Enter`. Alternatively, you can also press the "run" button in the top toolbar (using the "play" arrow icon).
 
@@ -152,7 +153,7 @@ All the details regarding the benchmarking process, the models we use, and pre-c
 
 ## Development guide
 
-To build the application manually, you will need to install Rust compiler from
+To build the application manually, you will need to install the Rust compiler from
 [rust-lang.org](https://rust-lang.org) (default installation settings should
 work fine). 
 
@@ -185,7 +186,7 @@ cargo tauri dev -- -- path/to/classification-results.zip
 ```
 
 However, note that the application will execute from the `src-tauri` folder, so the arguments
-need to be either absolute paths, or paths relative to the `src-tauri` folder. Furthermore,
+need to be either absolute paths or paths relative to the `src-tauri` folder. Furthermore,
 in this mode, the app is compiled without optimizations, so the interface can be slow for even 
-moderately-sized models. This mode should allow you to use standard 
+moderately sized models. This mode should allow you to use standard 
 JavaScript developer console to debug/inspect the UI.
