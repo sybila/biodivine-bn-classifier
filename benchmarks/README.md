@@ -1,11 +1,50 @@
 # BN Classifier Benchmarks
 
-This repository is configured to allow painless running of various sets of non-trivial benchmarks of the tool's `classification` engine and its `model-checking` component.
-You can also replicate the results of our case study.
-To do that, follow the provided `tutorial` (as instructed in the main readme).
+This repository is configured to allow painless running of various sets of non-trivial benchmarks of the tool's `classification` engine. We first briefly cover the large parametrized benchmarks relevant to the paper. Then, in section `Extended Benchmarks`, we cover details and results of other (more extensive) experiments we conducted.
 
-This README contains the following (in this order):
-- description of provided sets of benchmark models
+You can also replicate the results of our case study.
+To do that, follow the provided `tutorial` (as instructed in the main `readme` file).
+
+### Large parametrized models
+
+To evaluate the performance of the tool, we chose five large PSBN models originally from the [BBM repository](https://github.com/sybila/biodivine-boolean-models) with a number of interpretations ranging from 2^50 to 2^75. We classify the models
+with respect to the following set of four biologically motivated properties:
+
+- **φ1** = `∃x.∀y(@y. EF(x ∧ (↓z. AX z)))`  
+  **Explanation**: There exists a steady state reachable from all states.
+
+- **φ2** = `∃x.∃y.(@x.(¬y ∧ AX x)) ∧ (@y. AX y)`  
+  **Explanation**: The model admits multiple terminal steady states.
+
+- **φ3** = `∃x.∃y. @x.(EF(y ∧ (↓z. AX z)) ∧ EF(¬y ∧ (↓z. AX z)))`  
+  **Explanation**: There are states from which multiple steady states are reachable.
+
+- **φ4** = `∃x.(AX(¬x ∧ AF x))`  
+  **Explanation**: The model admits periodically visited "checkpoint" states (states without a self-loop, with all outgoing paths inevitably leading back to the state itself).
+
+The PSBN models (with the number of their states and interpretations) and computation times are shown in the following table:
+
+| Model                        | N. of states | N. of interpretations | Time (in seconds)   |
+| --------------------------- | -------- | ----------- | ------ |
+| BRAF Treatment Response     | 2^37     | 2^50        | 191.7s |
+| FA BRCA Pathway             | 2^28     | 2^52        | 435.0s |
+| Apoptosis Network           | 2^41     | 2^55        | 128.0s |
+| Butanol Production Pathway  | 2^66     | 2^65        | 46.7s  |
+| MAPK Pathway                | 2^18     | 2^75        | 20.8s  |
+
+If you have prepared and activated the virtual environment (as described in the main `readme`), you can execute this set of benchmarks with: 
+
+```
+python3 run.py 1h models/large-parametrized-models classification.py
+```
+
+For more details on other experiments, or regarding our scripts, see the following section. 
+
+
+# Extended Benchmarks
+
+This section covers more extensive tests and benchmarks. It contains the following (in this order):
+- description of various provided sets of benchmark models
 - description of provided precomputed results
 - description of provided benchmarking scripts
 - instructions on how to execute prepared sets of experiments - both full version and reduced version
