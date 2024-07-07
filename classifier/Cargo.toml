@@ -1,6 +1,6 @@
 [package]
 name = "bn-classifier"
-version = "0.1.0"
+version = "0.2.3"
 description = "Tool for classifying Boolean models by dynamic properties."
 authors = ["Ondřej Huvar <xhuvar@fi.muni.cz>", "Samuel Pastva <sam.pastva@gmail.com>"]
 license = "MIT"

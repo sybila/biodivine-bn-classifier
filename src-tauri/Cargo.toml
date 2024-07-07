@@ -1,6 +1,6 @@
 [package]
 name = "hctl-property-explorer"
-version = "0.2.2"
+version = "0.2.3"
 description = "An interactive explorer of HCTL properties through decision trees."
 authors = ["Ondřej Huvar<xhuvar@fi.muni.cz>", "Samuel Pastva <sam.pastva@gmail.com>"]
 license = "MIT"
@@ -17,9 +17,9 @@ biodivine-lib-bdd = "=0.5.2"
 biodivine-lib-param-bn = "=0.4.7"
 biodivine-hctl-model-checker = "=0.2.0"
 
-rand = "0.8.5"
 clap = { version = "4.1.4", features = ["derive"] }
 json = "0.12.4"
+rand = "0.8.5"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.2.2", features = ["dialog-all"] }
