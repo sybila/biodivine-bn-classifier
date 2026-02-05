@@ -8,11 +8,11 @@ edition = "2021"
 rust-version = "1.72"
 
 [dependencies]
-biodivine-lib-bdd = "=0.5.2"
-biodivine-lib-param-bn = "=0.4.7"
-biodivine-hctl-model-checker = "=0.2.0"
-clap = { version = "4.1.4", features = ["derive"] }
-zip = "0.6.3"
+biodivine-lib-bdd = "=0.6.2"
+biodivine-lib-param-bn = "=0.7.2"
+biodivine-hctl-model-checker = "=0.3.5"
+clap = { version = "4.5.57", features = ["derive"] }
+zip = "7.3.0"
 
 # Include Z3 dependencies as strictly as possible, we don't want
 # this to change because it might break our release builds.
