@@ -116,6 +116,12 @@ let ComputeEngine = {
 			.catch((error) => callback(error, undefined));
 	},
 
+	addAttributeCombination(attributeCombination, callback) {
+		invoke("create_attribute_combination", { "attributeCombination": attributeCombination })
+			.then((response) => callback(undefined, JSON.parse(response)))
+			.catch((error) => callback(error, undefined));
+	},
+
 	reloadTree(callback) {
 		invoke("reload_tree")
 			.then(() => callback())

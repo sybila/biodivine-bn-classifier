@@ -48,11 +48,7 @@ impl Bdt {
     }
 
     pub fn get_precision(&self) -> u32 {
-        if let Some(precision) = self.precision {
-            precision
-        } else {
-            10000
-        }
+        self.precision.unwrap_or(10_000)
     }
 
     /// Node ID of the tree root.
@@ -64,14 +60,25 @@ impl Bdt {
         }
     }
 
+    /// Add a new attribute to the graph (does not affect existing decisions in the tree).
+    pub fn add_attribute(&mut self, attribute: Attribute) -> AttributeId {
+        self.attributes.push(attribute);
+        AttributeId(self.attributes.len() - 1)
+    }
+
     /// Iterator over all valid node ids in this tree.
-    pub fn nodes(&self) -> BdtNodeIds {
+    pub fn nodes(&self) -> BdtNodeIds<'_> {
         self.storage.keys().map(|x| BdtNodeId(*x))
     }
 
     /// Iterator over all attribute ids in this tree.
-    pub fn attributes(&self) -> AttributeIds {
+    pub fn attributes(&self) -> AttributeIds<'_> {
         (0..self.attributes.len()).map(AttributeId)
+    }
+
+    /// A reference to the underlying attributes.
+    pub fn attributes_ref(&self) -> &[Attribute] {
+        &self.attributes
     }
 
     /// Getter for all named properties used for classification (some of them might not be used
