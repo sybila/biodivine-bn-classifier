@@ -6,7 +6,7 @@
 #[macro_use]
 extern crate json;
 
-use crate::bdt::{AttributeId, Bdt, BdtNodeId, Outcome};
+use crate::bdt::{read_attribute_combination, AttributeId, Bdt, BdtNodeId, Outcome};
 
 use biodivine_lib_bdd::{Bdd, BddPartialValuation};
 use biodivine_lib_param_bn::symbolic_async_graph::{GraphColors, SymbolicAsyncGraph};
@@ -37,6 +37,9 @@ pub mod util;
 struct Arguments {
     /// Path to a zip archive that contains results of the classification.
     results_archive: Option<String>,
+    /// A list of attribute combinations. Each combination can be a conjunction (&) or disjunction
+    /// (|) of attribute names. However, all used attributes must exist!
+    attribute_combinations: Vec<String>,
 }
 
 #[tauri::command]
@@ -131,7 +134,7 @@ async fn save_zip_archive(path: &str, list_file_contents: Vec<&str>) -> Result<(
 
     for (i, file_content) in list_file_contents.iter().enumerate() {
         zip_writer
-            .start_file(format!("witness_{i}.aeon"), FileOptions::default())
+            .start_file::<_, ()>(format!("witness_{i}.aeon"), FileOptions::default())
             .map_err(|e| format!("{e:?}"))?;
         writeln!(zip_writer, "{file_content}").map_err(|e| format!("{e:?}"))?;
     }
@@ -210,7 +213,7 @@ async fn download_witnesses(
         // Write the network into the zip.
         let file_content = graph.pick_witness(&witness_color).to_string();
         zip_writer
-            .start_file(format!("witness_{i}.aeon"), FileOptions::default())
+            .start_file::<_, ()>(format!("witness_{i}.aeon"), FileOptions::default())
             .map_err(|e| format!("{e:?}"))?;
         writeln!(zip_writer, "{file_content}").map_err(|e| format!("{e:?}"))?;
     }
@@ -393,12 +396,24 @@ async fn reload_tree(
         return Ok(());
     };
     let path = path.to_str().unwrap().to_string();
-    let (g, t) = setup_environment(path.as_str());
+    let (g, t) = setup_environment(path.as_str(), &[]);
     let mut tree = tree.lock().unwrap();
     *tree = t;
     let mut graph = graph.lock().unwrap();
     *graph = g;
     Ok(())
+}
+
+#[tauri::command]
+async fn create_attribute_combination(
+    tree: State<'_, Mutex<Bdt>>,
+    attribute_combination: &str,
+) -> Result<String, String> {
+    let mut tree = tree.lock().unwrap();
+    let new_attribute = read_attribute_combination(attribute_combination, tree.attributes_ref())?;
+    let new_id = tree.add_attribute(new_attribute);
+    let response = object! { "id": new_id.to_index() };
+    Ok(response.to_string())
 }
 
 /// Read the list of named properties from an `.aeon` model annotation object.
@@ -444,7 +459,10 @@ fn read_zip_file(reader: &mut ZipArchive<File>, file_name: &str) -> String {
 ///
 /// This can happen either before the application starts (if path is given as CLI arg),
 /// or after the first window is opened (if no path is given).
-fn setup_environment(archive_path: &str) -> (SymbolicAsyncGraph, Bdt) {
+fn setup_environment(
+    archive_path: &str,
+    attr_combinations: &[String],
+) -> (SymbolicAsyncGraph, Bdt) {
     // Open the zip archive with classification results.
     let archive_file = File::open(archive_path).unwrap();
     let mut archive = ZipArchive::new(archive_file).unwrap();
@@ -452,7 +470,7 @@ fn setup_environment(archive_path: &str) -> (SymbolicAsyncGraph, Bdt) {
     // Load the BN model (from the archive) and generate the extended STG.
     let aeon_str = read_zip_file(&mut archive, "model.aeon");
     let bn = BooleanNetwork::try_from(aeon_str.as_str()).unwrap();
-    let graph = SymbolicAsyncGraph::new(bn).unwrap();
+    let graph = SymbolicAsyncGraph::new(&bn).unwrap();
 
     // load the property names from model annotations (to later display them)
     let annotations = ModelAnnotation::from_model_string(aeon_str.as_str());
@@ -506,7 +524,7 @@ fn setup_environment(archive_path: &str) -> (SymbolicAsyncGraph, Bdt) {
         assert!(outcomes.insert(outcome, color_set).is_none());
     }
 
-    let bdt = Bdt::new_from_graph(outcomes, &graph, properties_map);
+    let bdt = Bdt::new_from_graph(outcomes, &graph, properties_map, attr_combinations);
     (graph, bdt)
 }
 
@@ -517,12 +535,12 @@ fn main() {
     let args = Arguments::parse();
 
     let (graph, bdt) = if let Some(user_path) = args.results_archive {
-        setup_environment(user_path.as_str())
+        setup_environment(user_path.as_str(), &args.attribute_combinations)
     } else {
         // Make a fake Boolean network and a fake decision tree. The GUI will force the user
         // to reload the tree once the window has started.
         let bn = BooleanNetwork::new(RegulatoryGraph::new(vec!["x".to_string()]));
-        let graph = SymbolicAsyncGraph::new(bn).unwrap();
+        let graph = SymbolicAsyncGraph::new(&bn).unwrap();
         let tree = Bdt::new(HashMap::new(), Vec::new(), HashMap::new());
         (graph, tree)
     };
@@ -551,6 +569,7 @@ fn main() {
             save_file,
             save_zip_archive,
             reload_tree,
+            create_attribute_combination
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

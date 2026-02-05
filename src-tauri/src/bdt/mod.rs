@@ -22,6 +22,8 @@ mod _impl_bdt_node;
 /// **(internal)** Implementation of indexing operations provided by BDTNodeId and AttributeId.
 mod _impl_indexing;
 
+pub use _attributes_for_network::read_attribute_combination;
+
 /// Outcome is one possible result of classification by the decision tree. It is just a wrapper
 /// of `String`. You are responsible for assigning your own meaning to individual outcomes.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

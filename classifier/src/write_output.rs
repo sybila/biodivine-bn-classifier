@@ -83,13 +83,13 @@ fn prepare_report_intro(
 /// Write a short summary regarding each category of the color decomposition, and dump a BDD
 /// encoding the colors, all into the `archive_name` zip.
 ///
-///  - `assertion_formulae`: list of assertion formulae
-///  - `all_valid_colors`: represents a "unit color set", i.e. all colors satisfying the
-///     assertion formulae.
-///  - `named_property_formulae`: lists the property names with their HCTL formula strings.
-///  - `property_results`: lists the symbolic color set results for each property.
-///  - `archive_name`: name of the `.zip` archive with results.
-///  - `original_model_str`: original model in the aeon format
+/// - `assertion_formulae`: list of assertion formulae
+/// - `all_valid_colors`: represents a "unit color set", i.e. all colors satisfying the
+///   assertion formulae.
+/// - `named_property_formulae`: lists the property names with their HCTL formula strings.
+/// - `property_results`: lists the symbolic color set results for each property.
+/// - `archive_name`: name of the `.zip` archive with results.
+/// - `original_model_str`: original model in the aeon format
 ///
 /// Each result category is given by a set of colors that satisfy exactly the same properties.
 pub fn write_classifier_output(
@@ -151,7 +151,7 @@ pub fn write_classifier_output(
             // If the BDD is not empty, the results go directly into the zip archive.
             let bdd_file_name = format!("bdd_dump_{}.txt", bool_vec_to_string(&validity));
             zip_writer
-                .start_file(&bdd_file_name, FileOptions::default())
+                .start_file::<_, ()>(&bdd_file_name, FileOptions::default())
                 .map_err(std::io::Error::from)?;
 
             category_colors.as_bdd().write_as_string(&mut zip_writer)?;
@@ -160,13 +160,13 @@ pub fn write_classifier_output(
 
     // Finally, we can write the report.
     zip_writer
-        .start_file("report.txt", FileOptions::default())
+        .start_file::<_, ()>("report.txt", FileOptions::default())
         .map_err(std::io::Error::from)?;
     zip_writer.write_all(&report)?;
 
     // Include the original model in the result bundle (we need to load it later).
     zip_writer
-        .start_file("model.aeon", FileOptions::default())
+        .start_file::<_, ()>("model.aeon", FileOptions::default())
         .map_err(std::io::Error::from)?;
     write!(zip_writer, "{original_model_str}")?;
 
@@ -196,7 +196,7 @@ pub fn build_classification_archive(
             // If the BDD is not empty, the results go directly into the zip archive.
             let bdd_file_name = format!("bdd_dump_{}.txt", category_name);
             zip_writer
-                .start_file(&bdd_file_name, FileOptions::default())
+                .start_file::<_, ()>(&bdd_file_name, FileOptions::default())
                 .map_err(std::io::Error::from)?;
 
             category_colors.as_bdd().write_as_string(&mut zip_writer)?;
@@ -205,7 +205,7 @@ pub fn build_classification_archive(
 
     // Include the original model in the result bundle (we need to load it later).
     zip_writer
-        .start_file("model.aeon", FileOptions::default())
+        .start_file::<_, ()>("model.aeon", FileOptions::default())
         .map_err(std::io::Error::from)?;
     write!(zip_writer, "{original_model_str}")?;
 
@@ -225,7 +225,7 @@ pub fn write_empty_report(
 
     // Here, we can write the empty report directly because there is nothing else to compute.
     zip_writer
-        .start_file("report.txt", FileOptions::default())
+        .start_file::<_, ()>("report.txt", FileOptions::default())
         .map_err(std::io::Error::from)?;
 
     writeln!(zip_writer, "### Assertion formulae")?;

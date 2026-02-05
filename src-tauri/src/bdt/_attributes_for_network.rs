@@ -11,7 +11,12 @@ impl Bdt {
         classes: OutcomeMap,
         graph: &SymbolicAsyncGraph,
         named_properties: HashMap<String, String>,
+        attribute_combinations: &[String],
     ) -> Bdt {
+        // TODO:
+        //  This process is somewhat weird if the graph has actual "parameters",
+        //  because the unit set of the model can eliminate some combinations of constants
+        //  based on monotonicity rules.
         let mut attributes = Vec::new();
         attributes_for_network_inputs(graph, &mut attributes);
         attributes_for_constant_parameters(graph, &mut attributes);
@@ -19,33 +24,100 @@ impl Bdt {
         attributes_for_implicit_function_tables(graph, &mut attributes);
         attributes_for_explicit_function_tables(graph, &mut attributes);
         attributes_for_conditional_observability(graph, &mut attributes);
-        let attributes = attributes
+        for combination in attribute_combinations {
+            let attribute = read_attribute_combination(combination, &attributes).unwrap();
+            attributes.push(attribute);
+        }
+        println!("Generated attributes: {}", attributes.len());
+        let attributes: Vec<Attribute> = attributes
             .into_iter()
             .filter(|a| {
-                let is_not_empty = !a.positive.is_empty() && !a.negative.is_empty();
-                let is_not_empty =
+                // For now, this part is disabled due to some weird unit set behavior in
+                // models with zero-arity parameters.
+                /*let is_not_empty =
                     is_not_empty && !a.positive.intersect(graph.unit_colors()).is_empty();
                 let is_not_empty =
-                    is_not_empty && !a.negative.intersect(graph.unit_colors()).is_empty();
-                is_not_empty
+                    is_not_empty && !a.negative.intersect(graph.unit_colors()).is_empty();*/
+                !a.positive.is_empty() && !a.negative.is_empty()
             })
             .collect();
+        println!("Filtered attributes: {}", attributes.len());
         Bdt::new(classes, attributes, named_properties)
+    }
+}
+
+pub fn mk_conjunction_attribute(a1: &Attribute, a2: &Attribute) -> Attribute {
+    assert!(a1.context.is_none() && a2.context.is_none());
+    Attribute {
+        name: format!("{} & {}", a1.name, a2.name),
+        positive: a1.positive.intersect(&a2.positive),
+        negative: a1.negative.union(&a2.negative),
+        context: None,
+    }
+}
+
+pub fn mk_disjunction_attribute(a1: &Attribute, a2: &Attribute) -> Attribute {
+    assert!(a1.context.is_none() && a2.context.is_none());
+    Attribute {
+        name: format!("{} | {}", a1.name, a2.name),
+        positive: a1.positive.union(&a2.positive),
+        negative: a1.negative.intersect(&a2.negative),
+        context: None,
+    }
+}
+
+pub fn read_attribute_combination(
+    attribute_combination: &str,
+    existing: &[Attribute],
+) -> Result<Attribute, String> {
+    if attribute_combination.contains("&") && !attribute_combination.contains("|") {
+        let mut conjunction: Option<Attribute> = None;
+        for x in attribute_combination.split("&") {
+            let attr = existing
+                .iter()
+                .find(|a| a.name == x.trim())
+                .ok_or_else(|| format!("Cannot find attribute `{}`", x))?;
+            if let Some(other) = conjunction {
+                conjunction = Some(mk_conjunction_attribute(&other, attr));
+            } else {
+                conjunction = Some(attr.clone());
+            }
+        }
+        conjunction
+            .ok_or_else(|| format!("Empty attribute combination: `{}`", attribute_combination))
+    } else if attribute_combination.contains("|") && !attribute_combination.contains("&") {
+        let mut disjunction: Option<Attribute> = None;
+        for x in attribute_combination.split("|") {
+            let attr = existing
+                .iter()
+                .find(|a| a.name == x.trim())
+                .ok_or_else(|| format!("Cannot find attribute `{}`", x))?;
+            if let Some(other) = disjunction {
+                disjunction = Some(mk_disjunction_attribute(&other, attr));
+            } else {
+                disjunction = Some(attr.clone());
+            }
+        }
+        disjunction
+            .ok_or_else(|| format!("Empty attribute combination: `{}`", attribute_combination))
+    } else {
+        Err(format!("Attribute combination `{attribute_combination}` must be either a conjunction (&) or disjunction (|)."))
     }
 }
 
 /// **(internal)** Construct basic attributes for all input variables.
 fn attributes_for_network_inputs(graph: &SymbolicAsyncGraph, out: &mut Vec<Attribute>) {
-    for v in graph.as_network().variables() {
+    let network = graph.as_network().unwrap();
+    for v in network.variables() {
         // v is input if it has no update function and no regulators
-        let is_input = graph.as_network().regulators(v).is_empty();
-        let is_input = is_input && graph.as_network().get_update_function(v).is_none();
+        let is_input = network.regulators(v).is_empty();
+        let is_input = is_input && network.get_update_function(v).is_none();
         if is_input {
             let bdd = graph
                 .symbolic_context()
                 .mk_implicit_function_is_true(v, &[]);
             out.push(Attribute {
-                name: graph.as_network().get_variable_name(v).clone(),
+                name: network.get_variable_name(v).clone(),
                 negative: graph.empty_colors().copy(bdd.not()),
                 positive: graph.empty_colors().copy(bdd),
                 context: None,
@@ -56,14 +128,16 @@ fn attributes_for_network_inputs(graph: &SymbolicAsyncGraph, out: &mut Vec<Attri
 
 /// **(internal)** Construct basic attributes for all constant parameters of the network.
 fn attributes_for_constant_parameters(graph: &SymbolicAsyncGraph, out: &mut Vec<Attribute>) {
-    for p in graph.as_network().parameters() {
-        if graph.as_network()[p].get_arity() == 0 {
+    let network = graph.as_network().unwrap();
+    for p in network.parameters() {
+        println!("{:?}: {}", p, network[p].get_name());
+        if network[p].get_arity() == 0 {
             // Parameter is a constant
             let bdd = graph
                 .symbolic_context()
                 .mk_uninterpreted_function_is_true(p, &[]);
             out.push(Attribute {
-                name: graph.as_network()[p].get_name().clone(),
+                name: network[p].get_name().clone(),
                 negative: graph.empty_colors().copy(bdd.not()),
                 positive: graph.empty_colors().copy(bdd),
                 context: None,
@@ -75,9 +149,9 @@ fn attributes_for_constant_parameters(graph: &SymbolicAsyncGraph, out: &mut Vec<
 /// **(internal)** If some regulation has a missing static constraint, try to build it
 /// and add it as an attribute.
 fn attributes_for_missing_constraints(graph: &SymbolicAsyncGraph, out: &mut Vec<Attribute>) {
-    let network = graph.as_network();
+    let network = graph.as_network().unwrap();
     let context = graph.symbolic_context();
-    for reg in graph.as_network().as_graph().regulations() {
+    for reg in network.as_graph().regulations() {
         // This is straight up copied from static constraint analysis in lib-param-bn.
         // For more context, go there.
         let target = reg.get_target();
@@ -165,26 +239,29 @@ fn attributes_for_missing_constraints(graph: &SymbolicAsyncGraph, out: &mut Vec<
 /// **(internal)** Make an explicit attributes (like `f[1,0,1] = 1`) for every implicit update
 /// function row in the network.
 fn attributes_for_implicit_function_tables(graph: &SymbolicAsyncGraph, out: &mut Vec<Attribute>) {
-    for v in graph.as_network().variables() {
-        let is_implicit_function = graph.as_network().get_update_function(v).is_none();
-        let is_implicit_function =
-            is_implicit_function && !graph.as_network().regulators(v).is_empty();
+    let network = graph.as_network().unwrap();
+    for v in network.variables() {
+        let is_implicit_function = network.get_update_function(v).is_none();
+        let is_implicit_function = is_implicit_function && !network.regulators(v).is_empty();
         if is_implicit_function {
-            let table = graph.symbolic_context().get_implicit_function_table(v);
+            let table = graph
+                .symbolic_context()
+                .get_implicit_function_table(v)
+                .unwrap();
             for (ctx, var) in table {
                 let bdd = graph.symbolic_context().bdd_variable_set().mk_var(var);
                 let ctx: Vec<String> = ctx
                     .into_iter()
-                    .zip(graph.as_network().regulators(v))
+                    .zip(network.regulators(v))
                     .map(|(b, r)| {
                         format!(
                             "{}{}",
                             if b { "" } else { "¬" },
-                            graph.as_network().get_variable_name(r)
+                            network.get_variable_name(r)
                         )
                     })
                     .collect();
-                let name = format!("{}{:?}", graph.as_network().get_variable_name(v), ctx);
+                let name = format!("{}{:?}", network.get_variable_name(v), ctx);
                 out.push(Attribute {
                     name: name.replace('\"', ""),
                     negative: graph.mk_empty_colors().copy(bdd.not()),
@@ -198,8 +275,9 @@ fn attributes_for_implicit_function_tables(graph: &SymbolicAsyncGraph, out: &mut
 
 /// **(internal)** Make an explicit argument for every explicit parameter function row in the network.
 fn attributes_for_explicit_function_tables(graph: &SymbolicAsyncGraph, out: &mut Vec<Attribute>) {
-    for p in graph.as_network().parameters() {
-        let parameter = graph.as_network().get_parameter(p);
+    let network = graph.as_network().unwrap();
+    for p in network.parameters() {
+        let parameter = network.get_parameter(p);
         if parameter.get_arity() > 0 {
             let table = graph.symbolic_context().get_explicit_function_table(p);
             let arg_names = (0..parameter.get_arity())
@@ -227,9 +305,9 @@ fn attributes_for_explicit_function_tables(graph: &SymbolicAsyncGraph, out: &mut
 /// Create "conditional observability" attributes for both implicit and explicit update functions.
 fn attributes_for_conditional_observability(graph: &SymbolicAsyncGraph, out: &mut Vec<Attribute>) {
     let context = graph.symbolic_context();
-    let network = graph.as_network();
-    for v in graph.as_network().variables() {
-        let regulators = graph.as_network().regulators(v);
+    let network = graph.as_network().unwrap();
+    for v in network.variables() {
+        let regulators = network.regulators(v);
 
         // Bdd that is true when update function for this variable is true
         let fn_is_true = if let Some(function) = network.get_update_function(v) {
@@ -306,7 +384,17 @@ fn variable_contexts(function: &FnUpdate) -> Vec<Vec<VariableId>> {
     match function {
         FnUpdate::Const(_) => vec![],
         FnUpdate::Var(_) => vec![],
-        FnUpdate::Param(_, args) => vec![args.clone()],
+        FnUpdate::Param(_, args) => {
+            let mut arg_vars = Vec::new();
+            for arg in args {
+                if let FnUpdate::Var(var) = arg {
+                    arg_vars.push(*var);
+                } else {
+                    return vec![];
+                }
+            }
+            vec![arg_vars]
+        }
         FnUpdate::Not(inner) => variable_contexts(inner),
         FnUpdate::Binary(_, l, r) => variable_contexts(l)
             .apply(|list| variable_contexts(r).into_iter().for_each(|c| list.push(c))),

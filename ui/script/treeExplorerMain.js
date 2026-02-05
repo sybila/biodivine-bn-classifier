@@ -98,6 +98,26 @@ function init() {
 			setSort(this.id);
 		}
 	}
+
+	// Setup attribute combinations
+	const combinationButton = document.getElementById("button-submit-combination");
+	const combinationInput = document.getElementById("attribute-combination-input");
+	combinationButton.onclick = function() {
+		const toSubmit = combinationInput.value;
+		ComputeEngine.addAttributeCombination(toSubmit, (error, success) => {
+			if (error !== undefined) {
+				alert(error);
+			} else {
+				// Reset input and hide decision attributes (assuming there are any).
+				combinationInput.value = "";
+
+				let selected = CytoscapeEditor.getSelectedNodeTreeData();
+				selected.attributes = undefined;
+				document.getElementById("mixed-attributes").classList.add("gone");
+				document.getElementById("button-add-variable").classList.remove("gone");
+			}
+		});
+	}
 }
 
 function compareInformationGain(a, b) {
