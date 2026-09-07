@@ -5,14 +5,13 @@ description = "Tool for classifying Boolean models by dynamic properties."
 authors = ["Ondřej Huvar <xhuvar@fi.muni.cz>", "Samuel Pastva <sam.pastva@gmail.com>"]
 license = "MIT"
 edition = "2021"
-rust-version = "1.72"
 
 [dependencies]
 biodivine-lib-bdd = "=0.6.2"
 biodivine-lib-param-bn = "=0.7.2"
 biodivine-hctl-model-checker = "=0.3.5"
 clap = { version = "4.5.57", features = ["derive"] }
-zip = "7.3.0"
+zip = "8.6.0"
 
 # Include Z3 dependencies as strictly as possible, we don't want
 # this to change because it might break our release builds.

@@ -26,21 +26,17 @@ impl Attribute {
     /// Returns true when this attribute is a more specific version of the argument attribute.
     pub fn is_specification_of(&self, attr: &Attribute) -> bool {
         match (&self.context, &attr.context) {
-            (Some(my_ctx), Some(their_ctx)) => {
-                if my_ctx.regulator == their_ctx.regulator && my_ctx.target == their_ctx.target {
-                    if my_ctx.context.len() > their_ctx.context.len() {
-                        for v in &their_ctx.context {
-                            if !my_ctx.context.iter().any(|it| it == v) {
-                                return false;
-                            }
-                        }
-                        true
-                    } else {
-                        false
+            (Some(my_ctx), Some(their_ctx))
+                if my_ctx.regulator == their_ctx.regulator
+                    && my_ctx.target == their_ctx.target
+                    && my_ctx.context.len() > their_ctx.context.len() =>
+            {
+                for v in &their_ctx.context {
+                    if !my_ctx.context.iter().any(|it| it == v) {
+                        return false;
                     }
-                } else {
-                    false
                 }
+                true
             }
             _ => false,
         }

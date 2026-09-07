@@ -157,8 +157,11 @@ To build the application manually, you will need to install the Rust compiler fr
 [rust-lang.org](https://rust-lang.org) (default installation settings should
 work fine). 
 
-Afterward, you also need to install [tauri](https://tauri.app/) using 
-`cargo install tauri-cli`.
+Afterward, you also need to install the [Tauri](https://tauri.app/) 1 CLI (note that `tauri-cli` 2.x is not compatible with this project's config):
+
+```
+cargo install tauri-cli --version "^1" --locked
+```
 
 #### Compiling `bn-classifier`
 

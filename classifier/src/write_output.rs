@@ -5,7 +5,7 @@ use biodivine_lib_param_bn::symbolic_async_graph::GraphColors;
 use std::collections::HashMap;
 
 use std::fs::File;
-use std::io::{ErrorKind, Write};
+use std::io::Write;
 use std::path::Path;
 
 use zip::write::{FileOptions, ZipWriter};
@@ -104,7 +104,7 @@ pub fn write_classifier_output(
     // If there are some non existing dirs in path, create them.
     let prefix = archive_path
         .parent()
-        .ok_or(std::io::Error::new(ErrorKind::Other, "Invalid path."))?;
+        .ok_or(std::io::Error::other("Invalid path."))?;
     std::fs::create_dir_all(prefix)?;
 
     // Create a zip writer for the desired archive.
@@ -184,7 +184,7 @@ pub fn build_classification_archive(
     // If there are some non existing dirs in path, create them.
     let prefix = archive_path
         .parent()
-        .ok_or(std::io::Error::new(ErrorKind::Other, "Invalid path."))?;
+        .ok_or(std::io::Error::other("Invalid path."))?;
     std::fs::create_dir_all(prefix)?;
 
     // Create a zip writer for the desired archive.
